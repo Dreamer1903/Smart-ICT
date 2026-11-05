@@ -6,3 +6,11 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# School OS backend (Python)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+backend/*.db
+backend/*.db-*
