@@ -42,7 +42,7 @@ from app.models import (
 )
 from app.services import presence
 from app.services.access import AccessRequest, handle_access_request
-from simulators.ledger import SEED_DEBTS, account_for
+from simulators.ledger import SEED_DEBTS, STUDENTS_9A, STUDENTS_9B, account_for
 
 DEFAULT_PASSWORD = "school123"
 
@@ -55,14 +55,6 @@ STAFF: list[tuple[str, str, UserRole, str]] = [
     ("duty@school.uz", "Ким Сергей Александрович", UserRole.DUTY_TEACHER, "+998900000006"),
 ]
 
-STUDENTS_9A = [
-    "Алиев Тимур", "Беляева Анна", "Ганиев Рустам", "Давыдова Мария", "Ершов Никита",
-    "Жукова Полина", "Исмоилов Азиз", "Козлова Дарья", "Латипов Шахзод", "Миронова София",
-]
-STUDENTS_9B = [
-    "Назаров Бехруз", "Орлова Виктория", "Павлов Артём", "Рахимова Нилуфар", "Сидоров Иван",
-    "Тихонова Алина", "Умаров Жасур", "Фролова Ксения", "Хасанов Отабек", "Чернова Ева",
-]
 
 
 async def seed(session: AsyncSession) -> dict[str, int]:

@@ -102,6 +102,7 @@ async def availability(up: bool) -> dict[str, bool]:
 @onec.post("/admin/reset")
 async def reset() -> dict[str, str]:
     ledger.reset()
+    hik_state.reset()
     robi_events.clear()
     controller_commands.clear()
     messages.clear()
@@ -161,3 +162,118 @@ async def list_messages() -> list[dict[str, Any]]:
 app = FastAPI(title="SchoolOS — симулятор внешних систем")
 for r in (onec, robi, controller, notify):
     app.include_router(r)
+
+
+# ---------------------------------------------------------------- HikCentral Professional (эмулятор OpenAPI)
+import base64  # noqa: E402
+import hashlib  # noqa: E402
+import hmac  # noqa: E402
+
+from fastapi import Request  # noqa: E402
+
+from simulators.ledger import STUDENTS_9A, STUDENTS_9B  # noqa: E402
+
+HIK_AK = os.getenv("SIM_HIK_AK", "test-ak")
+HIK_SK = os.getenv("SIM_HIK_SK", "test-sk")
+HIK_GRANTED, HIK_DENIED = 196893, 197151  # коды эмулятора; в реальной системе — см. HIK_*_EVENT_TYPES
+FULL_GROUP, EXIT_GROUP = "1", "2"
+
+
+class HikState:
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        names = STUDENTS_9A + STUDENTS_9B
+        self.persons = [
+            {"personId": str(1000 + i), "personCode": account_for(i), "personName": n} for i, n in enumerate(names, 1)
+        ] + [{"personId": "9001", "personCode": "EMP-1", "personName": "Охранник Иванов"}]
+        # сейчас школа пускает всех: все в уровне «Вход и выход»
+        self.groups: dict[str, set[str]] = {FULL_GROUP: {p["personId"] for p in self.persons}, EXIT_GROUP: set()}
+        self.doors = [{"doorIndexCode": str(i), "doorName": n} for i, n in enumerate(
+            ["Турникет 1 — вход", "Турникет 1 — выход", "Турникет 2 — вход", "Турникет 2 — выход"], 1)]
+        self.events: list[dict[str, Any]] = []
+        self.calls: list[str] = []
+
+
+hik_state = HikState()
+hik = APIRouter(prefix="/hik", tags=["HikCentral"])
+
+
+def _hik_check(request: Request) -> None:
+    h = request.headers
+    signed = (h.get("x-ca-signature-headers") or "").split(",")
+    lines = ["POST", h.get("accept", ""), h.get("content-type", "")]
+    lines += [f"{name}:{h.get(name, '')}" for name in sorted(signed)]
+    to_sign = "\n".join(lines) + "\n" + request.url.path.removeprefix("/hik")
+    expected = base64.b64encode(hmac.new(HIK_SK.encode(), to_sign.encode(), hashlib.sha256).digest()).decode()
+    if h.get("x-ca-key") != HIK_AK or h.get("x-ca-signature") != expected:
+        raise HTTPException(401, "signature mismatch")
+    hik_state.calls.append(request.url.path)
+
+
+def _page(items: list[dict[str, Any]], body: dict[str, Any]) -> dict[str, Any]:
+    no, size = int(body.get("pageNo", 1)), int(body.get("pageSize", 20))
+    return {"code": "0", "msg": "Success", "data": {"total": len(items), "pageNo": no, "pageSize": size,
+                                                   "list": items[(no - 1) * size: no * size]}}
+
+
+@hik.post("/artemis/api/resource/v1/person/personList")
+async def hik_persons(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+    _hik_check(request)
+    return _page(hik_state.persons, body)
+
+
+@hik.post("/artemis/api/resource/v1/acsDoor/acsDoorList")
+async def hik_doors(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+    _hik_check(request)
+    return _page(hik_state.doors, body)
+
+
+@hik.post("/artemis/api/acs/v1/privilege/group/single/{op}")
+async def hik_group_op(op: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+    _hik_check(request)
+    group = hik_state.groups.setdefault(str(body["privilegeGroupId"]), set())
+    for item in body.get("list", []):
+        (group.add if op == "addPersons" else group.discard)(str(item["id"]))
+    return {"code": "0", "msg": "Success", "data": None}
+
+
+@hik.post("/artemis/api/acs/v1/door/events")
+async def hik_events(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+    _hik_check(request)
+    start, end = datetime.fromisoformat(body["startTime"]), datetime.fromisoformat(body["endTime"])
+    items = [e for e in hik_state.events if start <= datetime.fromisoformat(e["eventTime"]) <= end]
+    return _page(items, body)
+
+
+class HikPassIn(BaseModel):
+    person_id: str | None = None  # None — незнакомое лицо
+    door: str = "1"
+    direction: str = "IN"
+
+
+@hik.post("/admin/pass")
+async def hik_pass(body: HikPassIn) -> dict[str, Any]:
+    """Человек подошёл к терминалу: терминал решает по уровням доступа, как настоящий."""
+    in_full = body.person_id in hik_state.groups[FULL_GROUP]
+    in_exit = body.person_id in hik_state.groups.get(EXIT_GROUP, set())
+    granted = body.person_id is not None and (in_full or (body.direction == "OUT" and in_exit))
+    event = {
+        "eventId": f"E{len(hik_state.events) + 1:06d}",
+        "eventType": HIK_GRANTED if granted else HIK_DENIED,
+        "eventTime": datetime.now(UTC).isoformat(timespec="seconds"),
+        "personId": body.person_id or "",
+        "doorIndexCode": body.door,
+        "inAndOutType": 1 if body.direction == "IN" else 0,
+    }
+    hik_state.events.append(event)
+    return {"granted": granted, "event": event}
+
+
+@hik.get("/admin/state")
+async def hik_admin_state() -> dict[str, Any]:
+    return {"groups": {k: sorted(v) for k, v in hik_state.groups.items()}, "events": len(hik_state.events)}
+
+
+app.include_router(hik)

@@ -25,6 +25,7 @@ from app.models import (
     AccessOverride,
     AccessReason,
     GateDirection,
+    HikAccessState,
     OutboxMessage,
     OutboxStatus,
     PaymentStatusRecord,
@@ -38,6 +39,7 @@ from app.schemas.access import (
     DebtorOut,
     DeviceIn,
     DeviceOut,
+    DevicePatch,
     IntegrationHealthOut,
     OverrideIn,
     OverrideOut,
@@ -184,7 +186,7 @@ async def _devices(db: DbSession) -> list[DeviceOut]:
     return [
         DeviceOut(id=d.id, code=d.code, name=d.name, location=d.location, adapter=d.adapter,
                   command_url=d.command_url, is_active=d.is_active, last_seen_at=d.last_seen_at,
-                  connected=hub.is_connected(d.code))
+                  connected=hub.is_connected(d.code), default_direction=d.default_direction)
         for d in devices
     ]
 
@@ -246,6 +248,7 @@ async def debtors(db: DbSession, _: Admin) -> list[DebtorOut]:
         for o in (await db.execute(select(AccessOverride).where(
             AccessOverride.revoked_at.is_(None), AccessOverride.valid_until > now))).scalars()
     }
+    hik = {h.student_id: h for h in (await db.execute(select(HikAccessState))).scalars()}
     denied = dict(
         (await db.execute(
             select(AccessEvent.student_id, func.count())
@@ -261,9 +264,21 @@ async def debtors(db: DbSession, _: Admin) -> list[DebtorOut]:
             override_id=overrides[s.id].id if s.id in overrides else None,
             override_until=overrides[s.id].valid_until if s.id in overrides else None,
             denied_today=denied.get(s.id, 0),
+            hik_person_id=s.hik_person_id,
+            hik_full_access=hik[s.id].full_access if s.id in hik else None,
+            hik_pending=hik[s.id].pending if s.id in hik else None,
+            hik_error=hik[s.id].last_error if s.id in hik else None,
         )
         for r, s in records
     ]
+
+
+async def _hik_reconcile(db: DbSession, student_id: int) -> None:
+    from app.services.hik import reconcile_student
+
+    student = await db.get(Student, student_id)
+    if student is not None:
+        await reconcile_student(db, student)
 
 
 def _override_out(o: AccessOverride) -> OverrideOut:
@@ -282,7 +297,10 @@ async def create_override(body: OverrideIn, db: DbSession, user: CurrentUser) ->
                        valid_until=body.valid_until or now + timedelta(hours=body.hours),
                        reason=body.reason, created_by_id=user.id)
     db.add(o)
+    await db.flush()
+    await _hik_reconcile(db, body.student_id)
     await db.commit()
+    outbox.kick()
     return _override_out(o)
 
 
@@ -292,7 +310,10 @@ async def revoke_override(override_id: int, db: DbSession) -> OverrideOut:
     if o is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Пропуск не найден")
     o.revoked_at = o.revoked_at or utcnow()
+    await db.flush()
+    await _hik_reconcile(db, o.student_id)
     await db.commit()
+    outbox.kick()
     return _override_out(o)
 
 
@@ -331,3 +352,16 @@ async def create_device(body: DeviceIn, db: DbSession) -> DeviceOut:
     return DeviceOut(id=d.id, code=d.code, name=d.name, location=d.location, adapter=d.adapter,
                      command_url=d.command_url, is_active=d.is_active, last_seen_at=d.last_seen_at,
                      connected=hub.is_connected(d.code))
+
+
+@router.patch("/devices/{device_id}", response_model=DeviceOut, dependencies=[Depends(require_roles())])
+async def update_device(device_id: int, body: DevicePatch, db: DbSession) -> DeviceOut:
+    d = await db.get(AccessDevice, device_id)
+    if d is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Устройство не найдено")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(d, k, v)
+    await db.commit()
+    return DeviceOut(id=d.id, code=d.code, name=d.name, location=d.location, adapter=d.adapter,
+                     command_url=d.command_url, is_active=d.is_active, last_seen_at=d.last_seen_at,
+                     connected=hub.is_connected(d.code), default_direction=d.default_direction)

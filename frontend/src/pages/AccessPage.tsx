@@ -12,12 +12,12 @@ import { Select } from "@/components/ui/input";
 import { useLiveEvents } from "@/hooks/useLiveEvents";
 import { api } from "@/lib/api";
 import type {
-  AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, GateDirection, IntegrationHealth, Student,
+  AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, GateDirection, HikStatus, IntegrationHealth, Student,
 } from "@/lib/types";
 import { cn, formatMoney, formatTime, minutesAgo } from "@/lib/utils";
 
-const INTEGRATION_LABEL: Record<string, string> = { "1c": "1С (оплата)", robi: "Robi (посещаемость)", telegram: "Telegram", sms: "SMS-шлюз" };
-const ADAPTER_LABEL: Record<string, string> = { RESPONSE: "REST (ответ)", HTTP: "HTTP-команда", WEBSOCKET: "WebSocket", TCP: "TCP" };
+const INTEGRATION_LABEL: Record<string, string> = { "1c": "1С (оплата)", hikcentral: "HikCentral (терминалы)", robi: "Robi (посещаемость)", telegram: "Telegram", sms: "SMS-шлюз" };
+const ADAPTER_LABEL: Record<string, string> = { HIKCENTRAL: "HikCentral", RESPONSE: "REST (ответ)", HTTP: "HTTP-команда", WEBSOCKET: "WebSocket", TCP: "TCP" };
 
 function Kpi({ icon: Icon, label, value, hint, tone }: {
   icon: ComponentType<{ className?: string }>; label: string; value: string | number; hint?: string; tone: string;
@@ -54,6 +54,7 @@ export function AccessPage() {
   const [summary, setSummary] = useState<AccessSummary | null>(null);
   const [events, setEvents] = useState<AccessEventRow[]>([]);
   const [debtors, setDebtors] = useState<Debtor[]>([]);
+  const [hik, setHik] = useState<HikStatus | null>(null);
   const [onlyDenied, setOnlyDenied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
@@ -64,6 +65,7 @@ export function AccessPage() {
       api.accessSummary(), api.accessEvents({ decision: onlyDenied ? "DENIED" : undefined, limit: 60 }), api.debtors(),
     ]);
     setSummary(s); setEvents(e); setDebtors(d);
+    api.hikStatus().then(setHik).catch(() => setHik(null));
   }, [onlyDenied]);
 
   useEffect(() => { void load(); const t = setInterval(() => void load(), 30_000); return () => clearInterval(t); }, [load]);
@@ -91,7 +93,7 @@ export function AccessPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold"><ShieldCheck className="size-6 text-indigo-600" /> Контроль доступа</h1>
-          <p className="text-sm text-slate-500">Турникет → контроллер → SchoolOS → 1С → решение OPEN / DENY</p>
+          <p className="text-sm text-slate-500">1С → SchoolOS → права в HikCentral / решение OPEN·DENY → журнал, Robi, родители</p>
         </div>
         <div className="flex items-center gap-2">
           {toast && (
@@ -152,7 +154,7 @@ export function AccessPage() {
                     </td>
                     <td className="px-4 py-2">
                       {e.student_name ? <><span className="font-medium">{e.student_name}</span> <span className="text-xs text-slate-500">{e.class_name}</span></>
-                        : <span className="text-slate-500">{e.credential_kind}: {e.credential_value}</span>}
+                        : <span className="text-slate-500">{e.credential_kind ? `${e.credential_kind}: ${e.credential_value}` : e.device_code?.startsWith("hik-") ? "Незнакомое лицо" : (e.credential_value || "—")}</span>}
                     </td>
                     <td className="px-4 py-2 text-xs text-slate-600">{e.device_name}</td>
                     <td className="px-4 py-2">
@@ -174,6 +176,7 @@ export function AccessPage() {
         </Card>
 
         <div className="space-y-6">
+          {hik?.enabled && <HikCard hik={hik} />}
           <GateCheck onDone={load} />
           <Card>
             <CardHeader><CardTitle>Интеграции</CardTitle></CardHeader>
@@ -204,7 +207,7 @@ export function AccessPage() {
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2">Ученик</th><th className="px-4 py-2">Лицевой счёт</th><th className="px-4 py-2 text-right">Долг</th>
-                <th className="px-4 py-2">Отказов сегодня</th><th className="px-4 py-2">Проверено в 1С</th><th className="px-4 py-2 text-right">Действия</th>
+                <th className="px-4 py-2">Отказов сегодня</th>{hik?.enabled && <th className="px-4 py-2">HikCentral</th>}<th className="px-4 py-2">Проверено в 1С</th><th className="px-4 py-2 text-right">Действия</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -217,6 +220,7 @@ export function AccessPage() {
                   <td className="px-4 py-2.5 font-mono text-xs text-slate-600">{d.external_1c_id}</td>
                   <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-rose-700">{formatMoney(d.debt_amount, d.currency)}</td>
                   <td className="px-4 py-2.5 tabular-nums">{d.denied_today || "—"}</td>
+                  {hik?.enabled && <td className="px-4 py-2.5"><HikBadge d={d} enforce={hik.enforce} /></td>}
                   <td className="px-4 py-2.5 text-xs text-slate-500" title={d.last_error ?? ""}>
                     {minutesAgo(d.checked_at)}{d.last_error && <span className="text-rose-600"> · 1С недоступна</span>}
                   </td>
@@ -247,6 +251,44 @@ export function AccessPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+function HikBadge({ d, enforce }: { d: Debtor; enforce: boolean }) {
+  if (!d.hik_person_id) return <span className="text-xs text-slate-400">не связан</span>;
+  if (d.hik_error) return <Badge className="bg-rose-50 text-rose-700 ring-rose-600/20" title={d.hik_error}>ошибка</Badge>;
+  if (d.hik_pending === false) {
+    return enforce
+      ? <Badge className="bg-amber-100 text-amber-800 ring-amber-600/20">закрывается…</Badge>
+      : <Badge className="bg-slate-100 text-slate-700 ring-slate-500/20" title="Режим наблюдения">будет закрыт вход</Badge>;
+  }
+  if (d.hik_full_access === false) return <Badge className="bg-rose-100 text-rose-800 ring-rose-600/20">только выход</Badge>;
+  return <Badge className="bg-emerald-100 text-emerald-800 ring-emerald-600/20">вход открыт</Badge>;
+}
+
+function HikCard({ hik }: { hik: HikStatus }) {
+  return (
+    <Card className={cn(!hik.enforce && "border-amber-300")}>
+      <CardHeader>
+        <CardTitle>HikCentral Professional</CardTitle>
+        {hik.enforce
+          ? <Badge className="bg-emerald-100 text-emerald-800 ring-emerald-600/20">управление включено</Badge>
+          : <Badge className="bg-amber-100 text-amber-800 ring-amber-600/20">режим наблюдения</Badge>}
+      </CardHeader>
+      <CardContent className="space-y-1.5 text-sm">
+        <div className="flex justify-between"><span className="text-slate-500">Связано учеников</span>
+          <span className="tabular-nums">{hik.linked_students} / {hik.total_students}</span></div>
+        <div className="flex justify-between"><span className="text-slate-500">{hik.enforce ? "Закрывается вход" : "Нужно закрыть вход"}</span>
+          <span className="tabular-nums font-medium text-rose-700">{hik.would_revoke}</span></div>
+        <div className="flex justify-between"><span className="text-slate-500">{hik.enforce ? "Открывается вход" : "Нужно открыть вход"}</span>
+          <span className="tabular-nums font-medium text-emerald-700">{hik.would_grant}</span></div>
+        <div className="flex justify-between"><span className="text-slate-500">События</span>
+          <span>{hik.event_mode === "poll" ? "опрос" : hik.event_mode === "webhook" ? "push-подписка" : "опрос + push"}</span></div>
+        {!hik.enforce && (
+          <p className="pt-1 text-xs text-amber-700">SchoolOS только показывает, что изменил бы. Права в HikCentral не меняются, пока не включён HIK_ENFORCE.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

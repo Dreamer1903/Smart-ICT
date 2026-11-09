@@ -44,7 +44,7 @@ class HealthRegistry:
         s.last_error = message[:255]
 
     def snapshot(self) -> list[IntegrationState]:
-        for name in ("1c", "robi", "telegram", "sms"):
+        for name in ("1c", "hikcentral", "robi", "telegram", "sms"):
             self._get(name)
         return sorted(self.states.values(), key=lambda s: s.name)
 

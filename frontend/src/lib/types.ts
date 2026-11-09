@@ -160,6 +160,25 @@ export interface Debtor {
   override_id: number | null;
   override_until: string | null;
   denied_today: number;
+  hik_person_id: string | null;
+  hik_full_access: boolean | null;
+  hik_pending: boolean | null;
+  hik_error: string | null;
+}
+
+export interface HikStatus {
+  enabled: boolean;
+  enforce: boolean;
+  event_mode: string;
+  full_access_group_id: string;
+  exit_only_group_id: string;
+  linked_students: number;
+  total_students: number;
+  would_revoke: number;
+  would_grant: number;
+  queued: number;
+  last_event_cursor: string | null;
+  seen_event_types: Record<string, number>;
 }
 
 export interface IntegrationHealth {
@@ -177,7 +196,7 @@ export interface Device {
   code: string;
   name: string;
   location: string | null;
-  adapter: "RESPONSE" | "HTTP" | "WEBSOCKET" | "TCP";
+  adapter: "RESPONSE" | "HTTP" | "WEBSOCKET" | "TCP" | "HIKCENTRAL";
   command_url: string | null;
   is_active: boolean;
   last_seen_at: string | null;

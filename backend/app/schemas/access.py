@@ -68,6 +68,10 @@ class DebtorOut(BaseModel):
     override_id: int | None
     override_until: datetime | None
     denied_today: int
+    hik_person_id: str | None = None
+    hik_full_access: bool | None = None  # что применено в HikCentral
+    hik_pending: bool | None = None  # что нужно применить (в режиме наблюдения — не применяется)
+    hik_error: str | None = None
 
 
 class OverrideIn(BaseModel):
@@ -116,6 +120,7 @@ class DeviceOut(BaseModel):
     is_active: bool
     last_seen_at: datetime | None
     connected: bool
+    default_direction: GateDirection | None = None
 
 
 class DeviceIn(BaseModel):
@@ -124,6 +129,13 @@ class DeviceIn(BaseModel):
     location: str | None = None
     adapter: DeviceAdapter = DeviceAdapter.RESPONSE
     command_url: str | None = None
+
+
+class DevicePatch(BaseModel):
+    name: str | None = None
+    location: str | None = None
+    default_direction: GateDirection | None = None
+    is_active: bool | None = None
 
 
 class AccessSummary(BaseModel):
@@ -148,3 +160,18 @@ class OneCPaymentWebhook(BaseModel):
     debt: float | None = None
     currency: str = "UZS"
     paid_until: date | None = None
+
+
+class HikStatus(BaseModel):
+    enabled: bool
+    enforce: bool
+    event_mode: str
+    full_access_group_id: str
+    exit_only_group_id: str
+    linked_students: int
+    total_students: int
+    would_revoke: int  # должники, у которых в HikCentral ещё полный доступ
+    would_grant: int
+    queued: int
+    last_event_cursor: str | None
+    seen_event_types: dict[str, int]

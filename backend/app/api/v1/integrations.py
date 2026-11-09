@@ -45,3 +45,110 @@ async def onec_payment_webhook(
     outbox.kick()
     return PaymentCheckOut(student_id=student.id, has_debt=has_debt, debt_amount=debt, source=source, error=error,
                            reopened_event_id=reopened.event.id if reopened else None)
+
+
+# ---------------------------------------------------------------- HikCentral Professional
+
+from typing import Any  # noqa: E402
+
+from fastapi import Depends, Query  # noqa: E402
+from sqlalchemy import func  # noqa: E402
+
+from app.api.deps import MANAGEMENT, require_roles  # noqa: E402
+from app.integrations.hikcentral import HikCentralError  # noqa: E402
+from app.models import AccessEvent, HikAccessState, IntegrationCursor  # noqa: E402
+from app.schemas.access import HikStatus  # noqa: E402
+from app.services import hik  # noqa: E402
+
+hik_admin = [Depends(require_roles())]  # изменения конфигурации — только SuperAdmin
+
+
+def _require_hik() -> None:
+    if not settings.hik_enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Интеграция с HikCentral выключена (HIK_ENABLED=false)")
+
+
+@router.get("/hikcentral/status", response_model=HikStatus, dependencies=[Depends(require_roles(*MANAGEMENT))])
+async def hik_status(db: DbSession) -> HikStatus:
+    """Сводка: сколько учеников связано, кого нужно закрыть/открыть, какие коды событий приходят."""
+    total = await db.scalar(select(func.count()).select_from(Student)) or 0
+    linked = await db.scalar(select(func.count()).select_from(Student).where(Student.hik_person_id.is_not(None))) or 0
+    states = (await db.execute(select(HikAccessState))).scalars().all()
+    cursor = await db.get(IntegrationCursor, hik.EVENTS_CURSOR)
+    types = (await db.execute(
+        select(AccessEvent.external_event_type, func.count())
+        .where(AccessEvent.external_event_type.is_not(None)).group_by(AccessEvent.external_event_type)
+    )).all()
+    return HikStatus(
+        enabled=settings.hik_enabled, enforce=settings.hik_enforce, event_mode=settings.hik_event_mode,
+        full_access_group_id=settings.hik_full_access_group_id, exit_only_group_id=settings.hik_exit_only_group_id,
+        linked_students=linked, total_students=total,
+        would_revoke=sum(1 for s in states if s.pending is False),
+        would_grant=sum(1 for s in states if s.pending is True),
+        queued=sum(1 for s in states if s.queued),
+        last_event_cursor=cursor.value if cursor else None,
+        seen_event_types={str(t): c for t, c in types},
+    )
+
+
+@router.post("/hikcentral/sync-persons", dependencies=hik_admin)
+async def hik_sync_persons(db: DbSession) -> dict[str, Any]:
+    """Связать людей HikCentral с учениками (по personCode = лицевой счёт 1С или по ФИО)."""
+    _require_hik()
+    try:
+        report = await hik.sync_persons(db)
+    except HikCentralError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(e)) from None
+    await db.commit()
+    return report.__dict__
+
+
+@router.post("/hikcentral/sync-doors", dependencies=hik_admin)
+async def hik_sync_doors(db: DbSession) -> dict[str, int]:
+    _require_hik()
+    try:
+        created = await hik.sync_doors(db)
+    except HikCentralError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(e)) from None
+    await db.commit()
+    return {"created": created}
+
+
+@router.post("/hikcentral/reconcile", dependencies=hik_admin)
+async def hik_reconcile(db: DbSession) -> dict[str, Any]:
+    """Сверить права всех учеников. В режиме наблюдения только считает, кого нужно закрыть/открыть."""
+    _require_hik()
+    counts = await hik.reconcile_all(db)
+    await db.commit()
+    outbox.kick()
+    return {"enforce": settings.hik_enforce, "result": counts}
+
+
+@router.post("/hikcentral/poll", dependencies=hik_admin)
+async def hik_poll(db: DbSession) -> dict[str, int]:
+    _require_hik()
+    try:
+        counts = await hik.poll_events(db)
+    except HikCentralError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(e)) from None
+    await commit_and_dispatch(db)
+    outbox.kick()
+    return counts
+
+
+@router.post("/hikcentral/events")
+async def hik_events_webhook(payload: dict[str, Any], db: DbSession, token: str = Query(...)) -> dict[str, int]:
+    """Приём событий по push-подписке HikCentral (адрес указывается как eventDest с ?token=...)."""
+    if token != settings.hik_webhook_token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный token")
+    _require_hik()
+    params = payload.get("params") if isinstance(payload.get("params"), dict) else payload
+    raw_events = params.get("events") or []
+    counts: dict[str, int] = {}
+    for raw in raw_events:
+        ev = hik.normalize_event(raw) if isinstance(raw, dict) else None
+        result = await hik.ingest_event(db, ev) if ev else "invalid"
+        counts[result] = counts.get(result, 0) + 1
+    await commit_and_dispatch(db)
+    outbox.kick()
+    return counts

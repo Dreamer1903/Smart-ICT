@@ -49,9 +49,11 @@ class AccessReason(StrEnum):
     PAYMENT_CACHED = "PAYMENT_CACHED"  # 1С недоступна, решение по последнему известному статусу
     PAYMENT_UNAVAILABLE_ALLOWED = "PAYMENT_UNAVAILABLE_ALLOWED"  # 1С недоступна, политика allow
     REOPENED_AFTER_PAYMENT = "REOPENED_AFTER_PAYMENT"  # оплата пришла, пока ученик стоял у турникета
+    TERMINAL_GRANTED = "TERMINAL_GRANTED"  # терминал (HikCentral) пропустил по своему уровню доступа
     DEBT = "DEBT"
     UNKNOWN_CREDENTIAL = "UNKNOWN_CREDENTIAL"
     PAYMENT_UNAVAILABLE_DENIED = "PAYMENT_UNAVAILABLE_DENIED"
+    TERMINAL_DENIED = "TERMINAL_DENIED"  # терминал отказал (лицо/ладонь не распознаны, нет прав и т.п.)
 
 
 class DeviceAdapter(StrEnum):
@@ -61,6 +63,7 @@ class DeviceAdapter(StrEnum):
     HTTP = "HTTP"  # SchoolOS делает POST на command_url контроллера
     WEBSOCKET = "WEBSOCKET"  # контроллер держит WebSocket с SchoolOS
     TCP = "TCP"  # контроллер держит TCP-соединение (JSON lines)
+    HIKCENTRAL = "HIKCENTRAL"  # дверь под управлением HikCentral: решение принимает терминал по уровням доступа
 
 
 class OutboxStatus(StrEnum):

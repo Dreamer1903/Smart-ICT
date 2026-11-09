@@ -22,6 +22,7 @@ class Student(Base):
     # Внешние идентификаторы интеграций
     external_1c_id: Mapped[str | None] = mapped_column(String(64), unique=True)  # лицевой счёт / договор в 1С
     robi_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    hik_person_id: Mapped[str | None] = mapped_column(String(64), unique=True)  # personId в HikCentral
 
     school_class: Mapped["SchoolClass"] = relationship(back_populates="students")
     presence: Mapped["StudentPresenceState | None"] = relationship(

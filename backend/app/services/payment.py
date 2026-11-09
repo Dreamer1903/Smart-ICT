@@ -30,6 +30,7 @@ async def apply_balance(session: AsyncSession, student: Student, info: BalanceIn
     """Сохранить ответ 1С. Возвращает True, если долг только что был погашен."""
     record = await session.get(PaymentStatusRecord, student.id)
     was_debtor = bool(record and record.has_debt)
+    record_is_new = record is None
     if record is None:
         record = PaymentStatusRecord(student_id=student.id)
         session.add(record)
@@ -41,6 +42,12 @@ async def apply_balance(session: AsyncSession, student: Student, info: BalanceIn
     record.last_error = None
     record.last_error_at = None
     became_paid = was_debtor and not record.has_debt
+    if was_debtor != record.has_debt or record_is_new:
+        if settings.hik_enabled:  # долг появился / погашен → поменять уровень доступа в HikCentral
+            from app.services.hik import reconcile_student
+
+            await session.flush()
+            await reconcile_student(session, student)
     if was_debtor != record.has_debt:
         enqueue_event(session, DomainEvent(
             type="payment.changed",

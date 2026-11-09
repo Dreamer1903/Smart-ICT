@@ -1,6 +1,6 @@
 // Тонкая типизированная обёртка над fetch. JWT хранится в localStorage.
 import type {
-  AccessDecision, AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, PaymentCheckResult,
+  AccessDecision, AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, HikStatus, PaymentCheckResult,
   GateDirection, GatePassResult, LivePulse, NurseOutcome, NurseVisit, SchoolClass, Student, Token, User,
 } from "./types";
 
@@ -80,6 +80,8 @@ export const api = {
   revokeOverride: (id: number) => request(`/access/overrides/${id}`, { method: "DELETE" }),
   paymentCheck: (student_id: number) =>
     request<PaymentCheckResult>(`/access/students/${student_id}/payment-check`, { method: "POST" }),
+
+  hikStatus: () => request<HikStatus>("/integrations/hikcentral/status"),
 
   // Симулятор 1С (только dev: vite проксирует /sim → :8010)
   simPay: async (account: string) => {

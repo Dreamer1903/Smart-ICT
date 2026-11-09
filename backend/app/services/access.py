@@ -47,6 +47,8 @@ DISPLAY_TEXT: dict[AccessReason, str] = {
     AccessReason.DEBT: "Доступ ограничен. Обратитесь в администрацию",
     AccessReason.UNKNOWN_CREDENTIAL: "Карта не зарегистрирована",
     AccessReason.PAYMENT_UNAVAILABLE_DENIED: "Проверка недоступна. Обратитесь к охране",
+    AccessReason.TERMINAL_GRANTED: "Проход разрешён",
+    AccessReason.TERMINAL_DENIED: "Проход не выполнен",
 }
 
 REASON_LABEL: dict[AccessReason, str] = {
@@ -59,6 +61,8 @@ REASON_LABEL: dict[AccessReason, str] = {
     AccessReason.DEBT: "Задолженность по оплате",
     AccessReason.UNKNOWN_CREDENTIAL: "Неизвестный идентификатор",
     AccessReason.PAYMENT_UNAVAILABLE_DENIED: "1С недоступна — отказ по политике",
+    AccessReason.TERMINAL_GRANTED: "Пропущен терминалом",
+    AccessReason.TERMINAL_DENIED: "Отказ терминала",
 }
 
 
@@ -154,6 +158,9 @@ async def _record(
     at: datetime,
     pay: PaymentCheck | None,
     started: float,
+    external_id: str | None = None,
+    external_event_type: int | None = None,
+    notify_admin_unknown: bool = True,
 ) -> AccessEvent:
     event = AccessEvent(
         occurred_at=at,
@@ -168,6 +175,8 @@ async def _record(
         payment_source=pay.source if pay else None,
         latency_ms=int((time.perf_counter() - started) * 1000),
         message=DISPLAY_TEXT[reason],
+        external_id=external_id,
+        external_event_type=external_event_type,
     )
     session.add(event)
     await session.flush()
@@ -198,13 +207,21 @@ async def _record(
                     note=f"Не пропущен турникетом в {time_str}: {REASON_LABEL[reason].lower()}",
                     source="access", at=at,
                 )
+            # Терминал может выдать серию отказов подряд — родителю пишем не чаще раза в 10 минут
+            recent_deny = (await session.execute(
+                select(AccessEvent.id).where(
+                    AccessEvent.student_id == student.id, AccessEvent.decision == AccessDecision.DENIED,
+                    AccessEvent.id != event.id, AccessEvent.occurred_at >= at - timedelta(minutes=10),
+                ).limit(1)
+            )).first()
+        if student is not None and not recent_deny:
             outbox.notify_parent(
                 session, student, "deny",
                 f"{student.full_name}: в {time_str} проход в школу не выполнен — {REASON_LABEL[reason].lower()}. "
                 "Пожалуйста, свяжитесь с администрацией школы.",
             )
             outbox.notify_admin(session, f"Отказ в проходе: {student.full_name} ({REASON_LABEL[reason]}), {device.name}")
-        else:
+        elif student is None and notify_admin_unknown:
             outbox.notify_admin(session, f"Неизвестный идентификатор {req_value} на {device.name} в {time_str}")
 
     enqueue_event(session, DomainEvent(type="access.decision", payload={

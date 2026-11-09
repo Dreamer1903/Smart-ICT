@@ -72,6 +72,42 @@ class Settings(BaseSettings):
     tcp_listener_host: str = "0.0.0.0"
     tcp_listener_port: int = 9100
 
+    # ---------------- HikCentral Professional (OpenAPI / Artemis)
+    hik_enabled: bool = False
+    hik_base_url: str = "https://127.0.0.1"  # адрес OpenAPI-шлюза HikCentral
+    hik_app_key: str = ""  # AK партнёра OpenAPI
+    hik_app_secret: str = ""  # SK — секрет, хранить только в .env / секретах окружения
+    hik_verify_tls: bool = False  # у HikCentral обычно самоподписанный сертификат
+    hik_timeout_seconds: float = 10.0
+    hik_enforce: bool = False  # False — режим наблюдения: SchoolOS НЕ меняет права в HikCentral
+    hik_full_access_group_id: str = ""  # уровень доступа «Вход и выход»
+    hik_exit_only_group_id: str = ""  # уровень доступа «Только выход» (рекомендуется)
+    hik_match_by: str = "personCode"  # personCode — код = лицевой счёт 1С; name — по ФИО
+    hik_event_mode: str = "poll"  # poll | webhook | both
+    hik_poll_seconds: int = 10
+    hik_webhook_token: str = "dev-hik-token"
+    hik_granted_event_types: str = ""  # коды событий «проход разрешён»; пусто — по наличию personId
+    hik_denied_event_types: str = ""  # коды событий «отказ»
+    # Пути OpenAPI — сверить с документацией OpenAPI для HikCentral Professional 3.0
+    hik_path_person_list: str = "/artemis/api/resource/v1/person/personList"
+    hik_path_door_list: str = "/artemis/api/resource/v1/acsDoor/acsDoorList"
+    hik_path_group_list: str = "/artemis/api/acs/v1/privilege/group"
+    hik_path_group_add: str = "/artemis/api/acs/v1/privilege/group/single/addPersons"
+    hik_path_group_delete: str = "/artemis/api/acs/v1/privilege/group/single/deletePersons"
+    hik_path_door_events: str = "/artemis/api/acs/v1/door/events"
+
+    @staticmethod
+    def _int_csv(value: str) -> set[int]:
+        return {int(v) for v in value.split(",") if v.strip().isdigit()}
+
+    @property
+    def hik_granted_types(self) -> set[int]:
+        return self._int_csv(self.hik_granted_event_types)
+
+    @property
+    def hik_denied_types(self) -> set[int]:
+        return self._int_csv(self.hik_denied_event_types)
+
     @staticmethod
     def _csv(value: str) -> set[str]:
         return {v.strip().lower() for v in value.split(",") if v.strip()}

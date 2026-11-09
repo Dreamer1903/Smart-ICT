@@ -52,9 +52,13 @@ def notify_admin(session: AsyncSession, text: str) -> None:
 
 # ---------------------------------------------------------------- Доставка
 
-async def _deliver(msg: OutboxMessage) -> None:
+async def _deliver(msg: OutboxMessage, session: AsyncSession) -> None:
     p = msg.payload
     match msg.channel:
+        case "hik":
+            from app.services.hik import apply_access
+
+            await apply_access(session, int(p["student_id"]))
         case "robi":
             await integrations.robi.push_attendance(p)
         case "telegram":
@@ -82,18 +86,22 @@ async def process_outbox(session: AsyncSession, limit: int = 50) -> int:
     for msg in msgs:
         msg.attempts += 1
         try:
-            await _deliver(msg)
+            await _deliver(msg, session)
         except Exception as e:  # noqa: BLE001 — любая ошибка канала → повтор
             msg.last_error = str(e)[:1000]
             if msg.channel != "log":
-                health.error(msg.channel, str(e))
+                health.error("hikcentral" if msg.channel == "hik" else msg.channel, str(e))
             if msg.attempts >= settings.outbox_max_attempts:
                 msg.status = OutboxStatus.FAILED
+                if msg.channel == "hik":
+                    from app.services.hik import on_delivery_failed
+
+                    await on_delivery_failed(session, msg.payload)
             else:
                 msg.next_attempt_at = now + timedelta(seconds=min(5 * 2 ** (msg.attempts - 1), 3600))
         else:
             if msg.channel != "log":
-                health.ok(msg.channel)
+                health.ok("hikcentral" if msg.channel == "hik" else msg.channel)
             msg.status = OutboxStatus.SENT
             msg.sent_at = utcnow()
             delivered += 1

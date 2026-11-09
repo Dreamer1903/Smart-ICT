@@ -58,6 +58,32 @@ async def payment_recheck_job() -> None:
         outbox.kick()
 
 
+async def hik_poll_job() -> None:
+    from app.services import hik, outbox
+
+    async with SessionLocal() as session:
+        try:
+            counts = await hik.poll_events(session)
+        except Exception as e:  # noqa: BLE001 — недоступность HikCentral не должна ронять планировщик
+            logger.warning("HikCentral: опрос событий не удался: %s", e)
+            return
+        await commit_and_dispatch(session)
+        outbox.kick()
+        if counts:
+            logger.info("HikCentral: события %s", counts)
+
+
+async def hik_reconcile_job() -> None:
+    """Периодическая сверка прав (в т.ч. истечение временных пропусков)."""
+    from app.services import hik, outbox
+
+    async with SessionLocal() as session:
+        counts = await hik.reconcile_all(session)
+        await session.commit()
+        outbox.kick()
+        logger.info("HikCentral: сверка прав %s", counts)
+
+
 def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=settings.school_timezone)
     scheduler.add_job(
@@ -72,4 +98,10 @@ def build_scheduler() -> AsyncIOScheduler:
         payment_recheck_job, "interval", seconds=settings.payment_recheck_interval_seconds,
         id="payment_recheck", max_instances=1, coalesce=True,
     )
+    if settings.hik_enabled:
+        if settings.hik_event_mode in ("poll", "both"):
+            scheduler.add_job(hik_poll_job, "interval", seconds=settings.hik_poll_seconds,
+                              id="hik_poll", max_instances=1, coalesce=True)
+        scheduler.add_job(hik_reconcile_job, "interval", seconds=300, id="hik_reconcile",
+                          max_instances=1, coalesce=True)
     return scheduler
