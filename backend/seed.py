@@ -7,7 +7,9 @@
   * 2 класса (9"А", 9"Б"), 20 учеников, кабинеты и предметы;
   * сотрудники: SuperAdmin, директор, завуч, медсестра, учитель, дежурный;
   * проходы через турникеты, перекличка, визит в медпункт, ушедший домой ученик
-    и «потерявшийся» в здании ученик (DISCREPANCY).
+    и «потерявшийся» в здании ученик (DISCREPANCY);
+  * интеграции: лицевые счета 1С (LS-0001…), Robi ID, RFID/QR-идентификаторы, 4 контроллера;
+    3 должника (см. simulators/ledger.py) получают отказ на турникете, плюс 1 неизвестная карта.
 """
 
 import argparse
@@ -22,7 +24,12 @@ from app.core.security import hash_password
 from app.db.base import Base, utcnow
 from app.db.session import SessionLocal, engine
 from app.models import (
+    AccessDevice,
     ClassRoom,
+    CredentialKind,
+    DeviceAdapter,
+    PaymentStatusRecord,
+    StudentCredential,
     GateDirection,
     LocationStatus,
     NurseOutcome,
@@ -34,6 +41,8 @@ from app.models import (
     UserRole,
 )
 from app.services import presence
+from app.services.access import AccessRequest, handle_access_request
+from simulators.ledger import SEED_DEBTS, account_for
 
 DEFAULT_PASSWORD = "school123"
 
@@ -84,23 +93,52 @@ async def seed(session: AsyncSession) -> dict[str, int]:
             class_id=class_a.id if idx <= 10 else class_b.id,
             rfid_card_id=f"RFID-{idx:04d}",
             parent_phone=f"+99890{1000000 + idx:07d}",
+            parent_telegram_chat_id=str(100000000 + idx),
+            external_1c_id=account_for(idx),
+            robi_id=f"R-{idx:04d}",
         )
         students.append(st)
     session.add_all(students)
     await session.flush()
-    for st in students:
+    for idx, st in enumerate(students, start=1):
         await presence.get_or_create_state(session, st.id)
+        session.add_all([
+            StudentCredential(student_id=st.id, kind=CredentialKind.RFID, value=st.rfid_card_id or ""),
+            StudentCredential(student_id=st.id, kind=CredentialKind.QR, value=f"QR-{idx:04d}"),
+        ])
+        # Кэш статуса оплаты (как будто 1С уже опрошена) — совпадает с симулятором 1С
+        debt = SEED_DEBTS.get(idx, 0.0)
+        session.add(PaymentStatusRecord(student_id=st.id, has_debt=debt > 0, debt_amount=debt, checked_at=now))
 
-    # --- утро: проходы через турникет (IN) 40–55 минут назад
+    # --- контроллеры доступа
+    session.add_all([
+        AccessDevice(code="main-entrance-1", name="Главный вход, турникет 1", location="Холл 1 этажа",
+                     adapter=DeviceAdapter.RESPONSE),
+        AccessDevice(code="main-entrance-2", name="Главный вход, турникет 2", location="Холл 1 этажа",
+                     adapter=DeviceAdapter.HTTP, command_url="http://localhost:8010/controller/main-entrance-2/commands"),
+        AccessDevice(code="sport-gate", name="Вход со стадиона", location="Стадион", adapter=DeviceAdapter.WEBSOCKET),
+        AccessDevice(code="ui-simulator", name="Симулятор (панель администратора)", adapter=DeviceAdapter.RESPONSE),
+    ])
+    await session.flush()
+
+    # --- утро: ученики прикладывают карты 40–55 минут назад (через реальный движок решений)
     arrived = students[:8] + students[10:20]  # 2 ученика 9"А" не пришли (UNKNOWN)
+    granted = []
     for i, st in enumerate(arrived):
-        await presence.register_gate_pass(
-            session, st.id, GateDirection.IN, now - timedelta(minutes=55 - i % 15), gate_id="main-entrance-1"
-        )
+        res = await handle_access_request(session, AccessRequest(
+            device_code="main-entrance-1", direction=GateDirection.IN, credential_kind=CredentialKind.RFID,
+            credential_value=st.rfid_card_id, timestamp=now - timedelta(minutes=55 - i % 15),
+        ))
+        if res.event.decision.value == "GRANTED":
+            granted.append(st)
+    await handle_access_request(session, AccessRequest(  # неизвестная карта
+        device_code="main-entrance-1", direction=GateDirection.IN, credential_kind=CredentialKind.RFID,
+        credential_value="RFID-9999", timestamp=now - timedelta(minutes=30),
+    ))
 
     # --- перекличка: все пришедшие на уроке, кроме «потерявшегося» 9"А" №8 (Козлова)
     lost = students[7]
-    for st in arrived:
+    for st in granted:
         if st.id != lost.id:
             await presence.set_status(session, st.id, LocationStatus.IN_CLASS, note="Отмечен на уроке", source="seed")
 
@@ -114,9 +152,10 @@ async def seed(session: AsyncSession) -> dict[str, int]:
     await presence.apply_nurse_visit(session, visit)
 
     # --- уход домой: Павлов (9"Б") вышел через турникет
-    await presence.register_gate_pass(
-        session, students[12].id, GateDirection.OUT, now - timedelta(minutes=5), gate_id="main-entrance-1"
-    )
+    await handle_access_request(session, AccessRequest(
+        device_code="main-entrance-1", direction=GateDirection.OUT, credential_kind=CredentialKind.RFID,
+        credential_value=students[12].rfid_card_id, timestamp=now - timedelta(minutes=5),
+    ))
 
     # --- сверка: «потерявшийся» в здании получит флаг DISCREPANCY
     await presence.recompute_discrepancies(session, now)

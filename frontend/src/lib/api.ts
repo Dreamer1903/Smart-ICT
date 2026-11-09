@@ -1,5 +1,6 @@
 // Тонкая типизированная обёртка над fetch. JWT хранится в localStorage.
 import type {
+  AccessDecision, AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, PaymentCheckResult,
   GateDirection, GatePassResult, LivePulse, NurseOutcome, NurseVisit, SchoolClass, Student, Token, User,
 } from "./types";
 
@@ -66,6 +67,28 @@ export const api = {
     }),
   classCheck: (class_id: number, present_student_ids: number[]) =>
     request("/attendance/class-check", { method: "POST", body: JSON.stringify({ class_id, present_student_ids }) }),
+
+  // Контроль доступа
+  accessEvent: (body: {
+    device_code: string; direction: GateDirection; credential_kind?: CredentialKind; credential_value?: string; student_id?: number;
+  }) => request<AccessDecisionResult>("/access/events", { method: "POST", body: JSON.stringify(body) }),
+  accessEvents: (p: { decision?: AccessDecision; limit?: number } = {}) => request<AccessEventRow[]>(`/access/events${qs(p)}`),
+  accessSummary: () => request<AccessSummary>("/access/summary"),
+  debtors: () => request<Debtor[]>("/access/debtors"),
+  createOverride: (student_id: number, reason: string, hours = 24) =>
+    request("/access/overrides", { method: "POST", body: JSON.stringify({ student_id, reason, hours }) }),
+  revokeOverride: (id: number) => request(`/access/overrides/${id}`, { method: "DELETE" }),
+  paymentCheck: (student_id: number) =>
+    request<PaymentCheckResult>(`/access/students/${student_id}/payment-check`, { method: "POST" }),
+
+  // Симулятор 1С (только dev: vite проксирует /sim → :8010)
+  simPay: async (account: string) => {
+    const r = await fetch("/sim/1c/admin/pay", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account }),
+    });
+    if (!r.ok) throw new ApiError(r.status, "Симулятор 1С недоступен (uvicorn simulators.app:app --port 8010)");
+    return r.json();
+  },
 
   streamUrl: () => `${BASE}/dashboard/stream?token=${encodeURIComponent(tokenStore.get() ?? "")}`,
 };

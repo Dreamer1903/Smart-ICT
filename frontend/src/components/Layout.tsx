@@ -1,8 +1,8 @@
-import { Activity, HeartPulse, LogOut, Stethoscope } from "lucide-react";
+import { Activity, HeartPulse, LogOut, ShieldCheck, Stethoscope } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { cn, NURSE_ROLES, PULSE_ROLES, ROLE_LABEL } from "@/lib/utils";
+import { ACCESS_ROLES, cn, NURSE_ROLES, PULSE_ROLES, ROLE_LABEL } from "@/lib/utils";
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -10,6 +10,7 @@ export function Layout() {
 
   const links = [
     { to: "/pulse", label: "Пульс школы", icon: HeartPulse, roles: PULSE_ROLES },
+    { to: "/access", label: "Контроль доступа", icon: ShieldCheck, roles: ACCESS_ROLES },
     { to: "/nurse", label: "Медпункт", icon: Stethoscope, roles: NURSE_ROLES },
   ].filter((l) => l.roles.includes(user.role));
 

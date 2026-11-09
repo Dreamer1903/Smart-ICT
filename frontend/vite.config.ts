@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   server: {
     port: 5173,
-    proxy: { "/api": { target: process.env.VITE_API_PROXY ?? "http://localhost:8000", changeOrigin: true } },
+    proxy: {
+      "/api": { target: process.env.VITE_API_PROXY ?? "http://localhost:8000", changeOrigin: true },
+      // Симулятор внешних систем (1С/Robi) — только для разработки и демо
+      "/sim": { target: process.env.VITE_SIM_PROXY ?? "http://localhost:8010", rewrite: (p) => p.replace(/^\/sim/, "") },
+    },
   },
 });

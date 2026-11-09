@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DomainEvent } from "@/lib/types";
 
-const EVENT_TYPES = ["presence.changed", "presence.discrepancy", "presence.reset", "gate.pass", "nurse.visit"];
+const EVENT_TYPES = ["presence.changed", "presence.discrepancy", "presence.reset", "gate.pass", "nurse.visit", "access.decision", "payment.changed"];
 
 export function useLiveEvents(onEvent: (e: DomainEvent) => void, enabled = true) {
   const [connected, setConnected] = useState(false);

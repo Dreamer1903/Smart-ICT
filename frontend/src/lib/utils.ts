@@ -41,6 +41,10 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const PULSE_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "DutyTeacher"];
+export const ACCESS_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch"];
 export const NURSE_ROLES: UserRole[] = ["SuperAdmin", "Nurse"];
 
 export const homePathFor = (role: UserRole) => (role === "Nurse" ? "/nurse" : PULSE_ROLES.includes(role) ? "/pulse" : "/forbidden");
+
+export const formatMoney = (v: number, currency = "UZS") =>
+  `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(v)} ${currency === "UZS" ? "сум" : currency}`;

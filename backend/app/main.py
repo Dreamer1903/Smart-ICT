@@ -1,5 +1,6 @@
 """Точка входа FastAPI: `uvicorn app.main:app --reload` (из папки backend/)."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.events import event_bus
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
+from app.services import outbox
 from app.services.scheduler import build_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -21,7 +23,17 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     scheduler = build_scheduler() if settings.scheduler_enabled else None
     if scheduler:
         scheduler.start()
+    worker = asyncio.create_task(outbox.run_worker(SessionLocal)) if settings.scheduler_enabled else None
+    tcp_server = None
+    if settings.tcp_listener_enabled:
+        from app.integrations.tcp_listener import start_tcp_listener
+
+        tcp_server = await start_tcp_listener()
     yield
+    if tcp_server:
+        tcp_server.close()
+    if worker:
+        worker.cancel()
     if scheduler:
         scheduler.shutdown(wait=False)
     await engine.dispose()

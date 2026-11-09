@@ -18,6 +18,10 @@ class Student(Base):
     class_id: Mapped[int] = mapped_column(ForeignKey("school_classes.id", ondelete="RESTRICT"), index=True)
     rfid_card_id: Mapped[str | None] = mapped_column(String(64), unique=True)
     parent_phone: Mapped[str | None] = mapped_column(String(32))
+    parent_telegram_chat_id: Mapped[str | None] = mapped_column(String(64))
+    # Внешние идентификаторы интеграций
+    external_1c_id: Mapped[str | None] = mapped_column(String(64), unique=True)  # лицевой счёт / договор в 1С
+    robi_id: Mapped[str | None] = mapped_column(String(64), unique=True)
 
     school_class: Mapped["SchoolClass"] = relationship(back_populates="students")
     presence: Mapped["StudentPresenceState | None"] = relationship(

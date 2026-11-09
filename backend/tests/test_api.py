@@ -38,8 +38,8 @@ async def test_oauth2_form_login(client):
 async def test_live_pulse_from_seed(client, login):
     c = (await _pulse(client, await login("director@school.uz")))["counters"]
     assert c == {
-        "total_students": 20, "in_building": 17, "in_class": 15, "in_nurse": 1,
-        "not_reached_class": 1, "discrepancies": 1, "left_school": 1, "not_arrived": 2,
+        "total_students": 20, "in_building": 14, "in_class": 12, "in_nurse": 1,
+        "not_reached_class": 1, "discrepancies": 1, "left_school": 1, "not_arrived": 5,  # 2 не пришли + 3 должника
     }
 
 
@@ -116,13 +116,13 @@ async def test_attendance_class_check(client, login):
                           json={"class_id": st["class_id"], "present_student_ids": [st["id"]]}, headers=teacher)
     body = r.json()
     assert r.status_code == 200 and st["id"] in body["marked_in_class"]
-    # остальные 7 пришедших учеников 9"А" отсутствуют на перекличке → IN_BUILDING,
+    # остальные 6 пропущенных турникетом учеников 9"А" (должник Ганиев не прошёл) отсутствуют на перекличке → IN_BUILDING,
     # а т.к. прошли турникет >10 минут назад — сразу DISCREPANCY
-    assert len(body["marked_missing"]) == 7
+    assert len(body["marked_missing"]) == 6
     pulse = await _pulse(client, await login("zavuch@school.uz"))
     row = next(x for x in pulse["students"] if x["student_id"] == st["id"])
     assert row["status"] == "IN_CLASS" and not row["is_discrepancy"]
-    assert pulse["counters"]["discrepancies"] == 7
+    assert pulse["counters"]["discrepancies"] == 6
 
     foreign = await client.post("/attendance/class-check",
                                 json={"class_id": st["class_id"], "present_student_ids": [999]}, headers=teacher)
