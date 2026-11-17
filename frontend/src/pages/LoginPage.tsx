@@ -1,6 +1,6 @@
 import { Activity, ChevronDown, Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { GoogleSignIn } from "@/components/GoogleSignIn";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ const DEMO: { group: string; roles: { email: string; label: string }[] }[] = [
 export function LoginPage() {
   const { login, loginGoogle } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = params.get("next");
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;  // только внутренние адреса
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +40,7 @@ export function LoginPage() {
     setError(null);
     try {
       const user = await fn();
-      navigate(homePathFor(user.role), { replace: true });
+      navigate(safeNext ?? homePathFor(user.role), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка входа");
     } finally {
@@ -61,6 +64,7 @@ export function LoginPage() {
               <p className="text-xs text-slate-500">Учёт, расписание, журнал и безопасность школы</p>
             </div>
           </div>
+          {safeNext?.startsWith("/duty/checkin") && <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">Войдите — после входа дежурство отметится автоматически.</p>}
           <form onSubmit={onSubmit} className="space-y-3">
             <label className="block space-y-1 text-sm">
               <span className="font-medium">Email</span>

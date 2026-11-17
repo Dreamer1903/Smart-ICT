@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   server: {
     port: 5173,
+    host: true,  // доступно в школьной сети: телефоны открывают QR дежурства по адресу компьютера
     proxy: {
       "/api": { target: process.env.VITE_API_PROXY ?? "http://127.0.0.1:8000", changeOrigin: true },
       // Симулятор внешних систем (1С/Robi) — только для разработки и демо

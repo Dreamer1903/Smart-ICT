@@ -1,11 +1,14 @@
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { Layout } from "@/components/Layout";
 import type { UserRole } from "@/lib/types";
 import { ACCESS_ROLES, ENROLLMENT_ROLES, FAMILY_ROLES, homePathFor, JOURNAL_ROLES, NURSE_ROLES, PULSE_ROLES, REPORT_ROLES, STAFF_ROLES } from "@/lib/utils";
 import { DiaryPage } from "@/pages/DiaryPage";
+import { DutyCheckinPage } from "@/pages/DutyCheckinPage";
+import { DutyPage } from "@/pages/DutyPage";
+import { DutyQrPrintPage } from "@/pages/DutyQrPrintPage";
 import { JournalPage } from "@/pages/JournalPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { PreferencesPage } from "@/pages/PreferencesPage";
@@ -21,10 +24,11 @@ import { PulsePage } from "@/pages/PulsePage";
 
 function Guard({ roles, children }: { roles?: UserRole[]; children: ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="size-6 animate-spin text-indigo-600" /></div>;
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to={homePathFor(user.role)} replace />;
   return <>{children}</>;
 }
@@ -48,6 +52,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/duty/qr" element={<Guard roles={STAFF_ROLES}><DutyQrPrintPage /></Guard>} />
           <Route element={<Guard><Layout /></Guard>}>
             <Route path="/pulse" element={<Guard roles={PULSE_ROLES}><PulsePage /></Guard>} />
             <Route path="/enrollment" element={<Guard roles={ENROLLMENT_ROLES}><EnrollmentPage /></Guard>} />
@@ -59,6 +64,8 @@ export default function App() {
             <Route path="/journal" element={<Guard roles={JOURNAL_ROLES}><JournalPage /></Guard>} />
             <Route path="/diary" element={<Guard roles={FAMILY_ROLES}><DiaryPage /></Guard>} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route path="/duty" element={<Guard roles={STAFF_ROLES}><DutyPage /></Guard>} />
+            <Route path="/duty/checkin/:token" element={<Guard roles={STAFF_ROLES}><DutyCheckinPage /></Guard>} />
             <Route path="/attendance" element={<Guard roles={REPORT_ROLES}><AttendancePage /></Guard>} />
             <Route path="/access" element={<Guard roles={ACCESS_ROLES}><AccessPage /></Guard>} />
             <Route path="/nurse" element={<Guard roles={NURSE_ROLES}><NursePage /></Guard>} />

@@ -1,6 +1,6 @@
 // Шапка: пункты меню сгруппированы в раскрывающиеся списки (компьютер) и «бургер»-меню (телефон/планшет).
 import {
-  Activity, BookOpen, BookOpenCheck, CalendarCheck, CalendarDays, ChevronDown, ClipboardList, GraduationCap, HeartPulse,
+  Activity, BookOpen, CalendarClock, BookOpenCheck, CalendarCheck, CalendarDays, ChevronDown, ClipboardList, GraduationCap, HeartPulse,
   Library, LogOut, Menu, ShieldCheck, SlidersHorizontal, Stethoscope, Users, X, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -17,6 +17,7 @@ interface Group { label: string; icon: LucideIcon; items: Item[] }
 
 const EVERYONE: UserRole[] = [...STAFF_ROLES, ...FAMILY_ROLES];
 const TEACHING: UserRole[] = ["Teacher", "ZavuchAcademic", "ZavuchUpbringing"];
+const DUTY_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "Teacher", "DutyTeacher"];
 
 const GROUPS: Group[] = [
   { label: "Учёба", icon: GraduationCap, items: [
@@ -35,6 +36,7 @@ const GROUPS: Group[] = [
     { to: "/pulse", label: "Пульс школы", icon: HeartPulse, roles: PULSE_ROLES },
     { to: "/access", label: "Контроль доступа", icon: ShieldCheck, roles: ACCESS_ROLES },
     { to: "/nurse", label: "Медпункт", icon: Stethoscope, roles: NURSE_ROLES },
+    { to: "/duty", label: "Дежурства", icon: CalendarClock, roles: DUTY_ROLES },
   ] },
 ];
 
