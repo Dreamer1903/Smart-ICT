@@ -42,3 +42,20 @@ async def recreate_schema(drop: bool = True) -> None:
             if settings.is_sqlite:
                 await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_stamp_head)
+
+
+def _stamp_head(sync_conn) -> None:  # type: ignore[no-untyped-def]
+    """Пометить свежесозданную схему последней версией миграций — чтобы будущие обновления
+    (upgrade_db.py / alembic upgrade) применяли только новые изменения."""
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from alembic.script import ScriptDirectory
+
+    root = Path(__file__).resolve().parents[2]
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "alembic"))
+    head = ScriptDirectory.from_config(cfg).get_current_head()
+    MigrationContext.configure(sync_conn).stamp(ScriptDirectory.from_config(cfg), head)

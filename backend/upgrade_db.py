@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 
 # (признак схемы, ревизия Alembic) — от новых к старым
 KNOWN = [
+    (lambda t, c: "google_sub" in c.get("users", ()), "3ec5cee3a25a"),  # вход через Google
     (lambda t, c: "lessons" in t, "33651d8b707e"),  # учебная часть
     (lambda t, c: "full_name_latin" in c.get("students", ()) and "robi_id" not in c.get("students", ()), "1333f188dc1e"),
     (lambda t, c: "full_name_latin" in c.get("students", ()), "c29eaa43c4f0"),
@@ -44,7 +45,7 @@ def main() -> None:
     engine = create_engine(sync_url())
     insp = inspect(engine)
     tables = set(insp.get_table_names())
-    columns = {t: {c["name"] for c in insp.get_columns(t)} for t in ("students",) if t in tables}
+    columns = {t: {c["name"] for c in insp.get_columns(t)} for t in ("students", "users") if t in tables}
     with engine.connect() as conn:
         current = MigrationContext.configure(conn).get_current_revision()
     engine.dispose()

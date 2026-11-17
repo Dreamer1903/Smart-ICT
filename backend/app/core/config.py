@@ -28,6 +28,10 @@ class Settings(BaseSettings):
 
     gate_api_key: str = "dev-gate-key"
 
+    # Вход через Google (Google Identity Services). Пусто — кнопка «Войти через Google» скрыта.
+    google_client_id: str = ""  # OAuth Client ID типа «Веб-приложение» из Google Cloud Console
+    google_allowed_domains: str = ""  # напр. «oxford.uz» — пускать только почту школы; пусто — любой Google-аккаунт
+
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     scheduler_enabled: bool = True
