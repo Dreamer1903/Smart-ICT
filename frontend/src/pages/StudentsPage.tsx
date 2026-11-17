@@ -1,5 +1,8 @@
 // Список учеников: поиск, класс, статус (учится / на приёме), пансионат, где сейчас.
-import { Search, Users } from "lucide-react";
+import { FileSpreadsheet, Search, Users } from "lucide-react";
+import { useAuth } from "@/auth/AuthContext";
+import { ImportStudents } from "@/components/ImportStudents";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -15,12 +18,16 @@ export function StudentsPage() {
   const [search, setSearch] = useState("");
   const [classId, setClassId] = useState<number | null>(null);
   const [filter, setFilter] = useState<"all" | "ACTIVE" | "ENROLLING" | "boarders">("all");
+  const [showImport, setShowImport] = useState(false);
+  const [reload, setReload] = useState(0);
+  const { user } = useAuth();
+  const canImport = !!user && ["SuperAdmin", "Director", "Zavuch", "ParentRelations"].includes(user.role);
 
-  useEffect(() => { api.classes().then(setClasses); }, []);
+  useEffect(() => { api.classes().then(setClasses); }, [reload]);
   useEffect(() => {
-    const t = setTimeout(() => api.students({ search: search.trim() || undefined, class_id: classId }).then(setStudents), 200);
+    const t = setTimeout(() => api.students({ search: search.trim() || undefined, class_id: classId, limit: 500 }).then(setStudents), 200);
     return () => clearTimeout(t);
-  }, [search, classId]);
+  }, [search, classId, reload]);
 
   const rows = useMemo(() => students.filter((s) =>
     filter === "all" ? s.student_status !== "WITHDRAWN" : filter === "boarders" ? s.is_boarder : s.student_status === filter,
@@ -28,7 +35,11 @@ export function StudentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="flex items-center gap-2 text-2xl font-bold"><Users className="size-6 text-indigo-600" /> Ученики</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="flex items-center gap-2 text-2xl font-bold"><Users className="size-6 text-indigo-600" /> Ученики</h1>
+        {canImport && <Button variant="outline" onClick={() => setShowImport(true)}><FileSpreadsheet className="size-4" /> Загрузить из Excel</Button>}
+      </div>
+      {showImport && <ImportStudents onClose={() => setShowImport(false)} onDone={() => setReload((x) => x + 1)} />}
       <Card>
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
           <div className="relative w-72">

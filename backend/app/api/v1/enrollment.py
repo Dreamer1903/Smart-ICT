@@ -334,3 +334,35 @@ async def attendance_report(db: DbSession, day: Annotated[date | None, Query(ali
         ),
         rows=[AttendanceRowOut(**r.__dict__) for r in rows],
     )
+
+
+# ---------------------------------------------------------------- Импорт из Excel
+
+from fastapi import File, UploadFile  # noqa: E402
+
+from app.services.importer import ImportError_, import_students  # noqa: E402
+
+IMPORTERS = (R.DIRECTOR, R.ZAVUCH, R.PARENT_RELATIONS)
+MAX_IMPORT_BYTES = 10 * 1024 * 1024
+
+
+@router.post("/students/import")
+async def import_students_xlsx(
+    db: DbSession,
+    user: Annotated[User, Depends(require_roles(*IMPORTERS))],
+    file: Annotated[UploadFile, File(description="Excel: ID, ФИО (рус.), ФИО (лат.), Класс")],
+    dry_run: bool = True,
+) -> dict[str, object]:
+    """Загрузить учеников из Excel. По умолчанию dry_run=true — только показать, что изменится."""
+    data = await file.read(MAX_IMPORT_BYTES + 1)
+    if len(data) > MAX_IMPORT_BYTES:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail="Файл больше 10 МБ")
+    try:
+        report = await import_students(db, data, user, dry_run=dry_run)
+    except ImportError_ as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from None
+    if dry_run:
+        await db.rollback()
+    else:
+        await commit_and_dispatch(db)
+    return report.__dict__

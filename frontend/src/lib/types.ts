@@ -331,3 +331,16 @@ export interface AttendanceReport {
   summary: { total: number; came: number; late: number; absent: number; boarders: number };
   rows: AttendanceRow[];
 }
+
+export interface ImportReport {
+  sheet: string;
+  rows: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  moved: number;
+  classes_created: string[];
+  not_in_file: number;
+  warnings: string[];
+  dry_run: boolean;
+}

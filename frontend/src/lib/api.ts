@@ -1,6 +1,6 @@
 // Тонкая типизированная обёртка над fetch. JWT хранится в localStorage.
 import type {
-  AttendanceReport, Enrollment, GuardianIn, StaffNotification, StepKind, StudentCard,
+  AttendanceReport, Enrollment, ImportReport, GuardianIn, StaffNotification, StepKind, StudentCard,
   AccessDecision, AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, HikStatus, PaymentCheckResult,
   GateDirection, GatePassResult, LivePulse, NurseOutcome, NurseVisit, SchoolClass, Student, Token, User,
 } from "./types";
@@ -24,7 +24,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const token = tokenStore.get();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (!res.ok) {
@@ -52,7 +52,7 @@ export const api = {
   me: () => request<User>("/auth/me"),
 
   classes: () => request<SchoolClass[]>("/classes"),
-  students: (p: { search?: string; class_id?: number | null } = {}) => request<Student[]>(`/students${qs(p)}`),
+  students: (p: { search?: string; class_id?: number | null; limit?: number } = {}) => request<Student[]>(`/students${qs(p)}`),
 
   nurseVisits: (active?: boolean) => request<NurseVisit[]>(`/nurse/visits${qs({ active })}`),
   createVisit: (student_id: number, reason: string, notes?: string) =>
@@ -97,6 +97,12 @@ export const api = {
   updateStudent: (id: number, body: Record<string, unknown>) =>
     request<StudentCard>(`/students/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   attendance: (p: { date?: string; class_id?: number | null } = {}) => request<AttendanceReport>(`/reports/attendance${qs(p)}`),
+
+  importStudents: (file: File, dryRun: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request<ImportReport>(`/students/import?dry_run=${dryRun}`, { method: "POST", body: fd });
+  },
 
   // Уведомления сотрудникам
   notifications: () => request<{ unread: number; items: StaffNotification[] }>("/notifications"),
