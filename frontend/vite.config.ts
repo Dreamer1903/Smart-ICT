@@ -10,9 +10,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": { target: process.env.VITE_API_PROXY ?? "http://localhost:8000", changeOrigin: true },
+      "/api": { target: process.env.VITE_API_PROXY ?? "http://127.0.0.1:8000", changeOrigin: true },
       // Симулятор внешних систем (1С/Robi) — только для разработки и демо
-      "/sim": { target: process.env.VITE_SIM_PROXY ?? "http://localhost:8010", rewrite: (p) => p.replace(/^\/sim/, "") },
+      "/sim": { target: process.env.VITE_SIM_PROXY ?? "http://127.0.0.1:8010", rewrite: (p) => p.replace(/^\/sim/, "") },
     },
   },
 });
