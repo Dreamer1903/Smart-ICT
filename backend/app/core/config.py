@@ -60,8 +60,8 @@ class Settings(BaseSettings):
 
     # ---------------- Уведомления (Service Notification)
     notify_channels: str = "log"  # log,telegram,sms
-    notify_telegram_events: str = "entry,exit,deny,payment"
-    notify_sms_events: str = "deny,payment"  # SMS платные — по умолчанию только важное
+    notify_telegram_events: str = "entry,exit,deny,payment,absence,late,homework"
+    notify_sms_events: str = "deny,payment,absence"  # SMS платные — по умолчанию только важное
     telegram_bot_token: str = ""
     telegram_api_base: str = "https://api.telegram.org"
     telegram_admin_chat_id: str = ""
