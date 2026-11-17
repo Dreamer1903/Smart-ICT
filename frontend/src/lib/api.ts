@@ -31,7 +31,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      const d = body.detail;
+      detail = typeof d === "string" ? d
+        : d && typeof d === "object" && "message" in d
+          ? [d.message, ...((d.problems ?? d.errors ?? []) as string[])].join("\n")
+          : JSON.stringify(d);
     } catch { /* тело не JSON */ }
     if (res.status === 401) tokenStore.clear();
     throw new ApiError(res.status, detail);
@@ -44,6 +48,26 @@ const qs = (params: Record<string, string | number | boolean | undefined | null>
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== null && v !== "" && s.set(k, String(v)));
   const str = s.toString();
   return str ? `?${str}` : "";
+};
+
+/** Универсальные запросы для новых разделов (журнал, расписание, библиотека). */
+export const http = {
+  get: <T,>(path: string, params: Record<string, string | number | boolean | undefined | null> = {}) => request<T>(`${path}${qs(params)}`),
+  post: <T,>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) }),
+  put: <T,>(path: string, body: unknown) => request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  patch: <T,>(path: string, body: unknown) => request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+  del: (path: string) => request<void>(path, { method: "DELETE" }),
+  upload: <T,>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
+  /** Скачать файл с авторизацией (обычная ссылка не передаст токен). */
+  download: async (path: string, fileName: string) => {
+    const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${tokenStore.get() ?? ""}` } });
+    if (!res.ok) throw new ApiError(res.status, "Не удалось скачать файл");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await res.blob());
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
 };
 
 export const api = {

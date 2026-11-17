@@ -42,17 +42,33 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   ParentRelations: "Завуч по работе с родителями",
   Admissions: "Менеджер по приёму",
   Cashier: "Кассир",
+  ZavuchAcademic: "Завуч по учебной части",
+  ZavuchUpbringing: "Завуч по воспитательной части",
+  Student: "Ученик",
+  Parent: "Родитель",
 };
 
-export const PULSE_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "DutyTeacher"];
+export const PULSE_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "DutyTeacher"];
+export const FAMILY_ROLES: UserRole[] = ["Student", "Parent"];
+export const STAFF_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "Teacher", "Nurse",
+  "DutyTeacher", "ParentRelations", "Admissions", "Cashier"];
+export const TT_MANAGER_ROLES: UserRole[] = ["SuperAdmin", "ZavuchAcademic", "Zavuch"];
+export const TT_OVERSIGHT_ROLES: UserRole[] = [...TT_MANAGER_ROLES, "Director", "ZavuchUpbringing"];
+export const JOURNAL_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "Teacher"];
+export const DAY_NAMES: Record<number, string> = { 1: "Пн", 2: "Вт", 3: "Ср", 4: "Чт", 5: "Пт", 6: "Сб", 7: "Вс" };
 export const ACCESS_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch"];
-export const ENROLLMENT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Admissions", "Cashier", "Teacher"];
+export const ENROLLMENT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "ParentRelations", "Admissions", "Cashier", "Teacher"];
 export const REGISTRAR_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Admissions"];
-export const REPORT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Teacher", "DutyTeacher"];
+export const REPORT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "ParentRelations", "Teacher", "DutyTeacher"];
 export const NURSE_ROLES: UserRole[] = ["SuperAdmin", "Nurse"];
 
 export const homePathFor = (role: UserRole) =>
-  role === "Nurse" ? "/nurse" : PULSE_ROLES.includes(role) ? "/pulse" : ENROLLMENT_ROLES.includes(role) ? "/enrollment" : "/students";
+  FAMILY_ROLES.includes(role) ? "/diary"
+    : role === "Nurse" ? "/nurse"
+      : role === "Teacher" ? "/journal"
+        : role === "ZavuchAcademic" ? "/schedule"
+          : PULSE_ROLES.includes(role) ? "/pulse"
+            : ENROLLMENT_ROLES.includes(role) ? "/enrollment" : "/students";
 
 export const formatDate = (iso: string | null | undefined) =>
   iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("ru-RU") : "—";

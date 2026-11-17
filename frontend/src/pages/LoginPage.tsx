@@ -14,8 +14,12 @@ const DEMO = [
   { email: "zavuch@school.uz", label: "Завуч" },
   { email: "manager@school.uz", label: "Менеджер приёма" },
   { email: "cashier@school.uz", label: "Кассир" },
-  { email: "teacher@school.uz", label: "Кл. руководитель" },
+  { email: "teacher@school.uz", label: "Учитель" },
   { email: "parents@school.uz", label: "Завуч (родители)" },
+  { email: "academic@school.uz", label: "Завуч (учёба)" },
+  { email: "upbringing@school.uz", label: "Завуч (воспитание)" },
+  { email: "student@school.uz", label: "Ученик" },
+  { email: "parent@school.uz", label: "Родитель" },
   { email: "admin@school.uz", label: "SuperAdmin" },
 ];
 

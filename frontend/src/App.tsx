@@ -4,7 +4,12 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { Layout } from "@/components/Layout";
 import type { UserRole } from "@/lib/types";
-import { ACCESS_ROLES, ENROLLMENT_ROLES, homePathFor, NURSE_ROLES, PULSE_ROLES, REPORT_ROLES } from "@/lib/utils";
+import { ACCESS_ROLES, ENROLLMENT_ROLES, FAMILY_ROLES, homePathFor, JOURNAL_ROLES, NURSE_ROLES, PULSE_ROLES, REPORT_ROLES, STAFF_ROLES } from "@/lib/utils";
+import { DiaryPage } from "@/pages/DiaryPage";
+import { JournalPage } from "@/pages/JournalPage";
+import { LibraryPage } from "@/pages/LibraryPage";
+import { PreferencesPage } from "@/pages/PreferencesPage";
+import { SchedulePage } from "@/pages/SchedulePage";
 import { AttendancePage } from "@/pages/AttendancePage";
 import { EnrollmentPage } from "@/pages/EnrollmentPage";
 import { StudentCardPage } from "@/pages/StudentCardPage";
@@ -46,8 +51,14 @@ export default function App() {
           <Route element={<Guard><Layout /></Guard>}>
             <Route path="/pulse" element={<Guard roles={PULSE_ROLES}><PulsePage /></Guard>} />
             <Route path="/enrollment" element={<Guard roles={ENROLLMENT_ROLES}><EnrollmentPage /></Guard>} />
-            <Route path="/students" element={<StudentsPage />} />
-            <Route path="/students/:id" element={<StudentCardPage />} />
+            <Route path="/students" element={<Guard roles={STAFF_ROLES}><StudentsPage /></Guard>} />
+            <Route path="/students/:id" element={<Guard roles={STAFF_ROLES}><StudentCardPage /></Guard>} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/schedule/report" element={<SchedulePage />} />
+            <Route path="/preferences" element={<Guard roles={STAFF_ROLES}><PreferencesPage /></Guard>} />
+            <Route path="/journal" element={<Guard roles={JOURNAL_ROLES}><JournalPage /></Guard>} />
+            <Route path="/diary" element={<Guard roles={FAMILY_ROLES}><DiaryPage /></Guard>} />
+            <Route path="/library" element={<LibraryPage />} />
             <Route path="/attendance" element={<Guard roles={REPORT_ROLES}><AttendancePage /></Guard>} />
             <Route path="/access" element={<Guard roles={ACCESS_ROLES}><AccessPage /></Guard>} />
             <Route path="/nurse" element={<Guard roles={NURSE_ROLES}><NursePage /></Guard>} />

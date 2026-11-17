@@ -66,9 +66,10 @@ async def my_classes(db: DbSession, user: Staff) -> list[dict[str, Any]]:
         stmt = stmt.where((TeachingAssignment.teacher_id == user.id) | (TeachingAssignment.class_id.in_(own)))
     rows = []
     for a in (await db.execute(stmt)).scalars():
-        rows.append({"class_id": a.class_id, "class_name": a.school_class.name, "subject_id": a.subject_id,
-                     "subject_name": a.subject.name, "can_write": user.role in j.JOURNAL_ADMINS or a.teacher_id == user.id})
-    return sorted(rows, key=lambda r: (not r["can_write"], r["class_name"], r["subject_name"]))
+        rows.append({"class_id": a.class_id, "class_name": a.school_class.name, "grade_level": a.school_class.grade_level,
+                     "subject_id": a.subject_id, "subject_name": a.subject.name,
+                     "can_write": user.role in j.JOURNAL_ADMINS or a.teacher_id == user.id})
+    return sorted(rows, key=lambda r: (not r["can_write"], r["grade_level"], r["class_name"], r["subject_name"]))
 
 
 # ---------------------------------------------------------------- Уроки
