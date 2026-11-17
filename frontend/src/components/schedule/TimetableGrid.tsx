@@ -1,5 +1,6 @@
 // Сетка расписания: дни × уроки. mode определяет, что писать в клетке.
 import { Lock } from "lucide-react";
+import { useState } from "react";
 import { cn, DAY_NAMES } from "@/lib/utils";
 import type { Bells, TTEntry } from "./types";
 
@@ -18,8 +19,44 @@ interface Props {
 
 export function TimetableGrid({ bells, entries, mode, selectedId, onCellClick, highlight }: Props) {
   const at = (d: number, s: number) => entries.filter((e) => e.day === d && e.slot === s);
+  const today = new Date().getDay() || 7;
+  const [day, setDay] = useState(bells.days.includes(today) ? today : bells.days[0]);
+  const second = (e: TTEntry) => mode === "class" ? e.teacher_name : mode === "teacher" ? e.subject_name : `${e.class_name} · ${e.teacher_name}`;
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Телефон: выбор дня + список уроков */}
+      <div className="md:hidden">
+        <div className="mb-3 flex gap-1 overflow-x-auto">
+          {bells.days.map((d) => (
+            <button key={d} onClick={() => setDay(d)} className={cn("min-w-11 cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold",
+              d === day ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600")}>{DAY_NAMES[d]}</button>
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          {bells.slots.map((b) => {
+            const cell = at(day, b.number);
+            const hl = highlight?.(day, b.number);
+            return (
+              <div key={b.number} onClick={() => onCellClick?.(day, b.number, cell[0] ?? null)}
+                className={cn("flex items-stretch gap-3 rounded-lg border p-2", onCellClick && "cursor-pointer",
+                  cell.length ? COLORS[cell[0].subject_id % COLORS.length] : "border-dashed border-slate-200 bg-white",
+                  cell[0] && selectedId === cell[0].id && "ring-2 ring-indigo-600",
+                  hl === "ok" && "ring-2 ring-emerald-400", hl === "warn" && "ring-2 ring-amber-400", hl === "bad" && "opacity-40")}>
+                <div className="w-12 shrink-0 text-xs text-slate-500"><div className="font-semibold text-slate-700">{b.number} урок</div>{b.start_time}</div>
+                {cell.length ? cell.map((e) => (
+                  <div key={e.id} className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1 font-semibold">{mode === "teacher" ? `${e.class_name} · ${e.subject_name}` : e.subject_name}
+                      {e.locked && <Lock className="size-3 text-slate-500" />}</div>
+                    <div className="truncate text-xs text-slate-600">{mode === "teacher" ? e.room_name ?? "" : second(e)}{mode !== "teacher" && e.room_name ? ` · ${e.room_name}` : ""}</div>
+                  </div>
+                )) : <div className="flex-1 self-center text-xs text-slate-400">—</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* Планшет и компьютер: сетка дни × уроки */}
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full table-fixed border-separate border-spacing-1 text-xs">
         <thead>
           <tr>
@@ -62,6 +99,7 @@ export function TimetableGrid({ bells, entries, mode, selectedId, onCellClick, h
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

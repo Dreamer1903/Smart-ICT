@@ -42,15 +42,15 @@ export function StudentsPage() {
       {showImport && <ImportStudents onClose={() => setShowImport(false)} onDone={() => setReload((x) => x + 1)} />}
       <Card>
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
-          <div className="relative w-72">
+          <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-slate-400" />
             <Input className="pl-8" placeholder="ФИО или RFID…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Select className="w-36" value={classId ?? ""} onChange={(e) => setClassId(e.target.value ? Number(e.target.value) : null)}>
+          <Select className="w-[48%] sm:w-36" value={classId ?? ""} onChange={(e) => setClassId(e.target.value ? Number(e.target.value) : null)}>
             <option value="">Все классы</option>
             {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
-          <Select className="w-44" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
+          <Select className="w-[48%] sm:w-44" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
             <option value="all">Все</option><option value="ACTIVE">Учатся</option>
             <option value="ENROLLING">На приёме</option><option value="boarders">Пансионеры</option>
           </Select>
@@ -58,22 +58,22 @@ export function StudentsPage() {
         </div>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-2">Ученик</th><th className="px-4 py-2">Класс</th><th className="px-4 py-2">Пансионат</th>
-              <th className="px-4 py-2">Статус</th><th className="px-4 py-2">Сейчас</th><th className="px-4 py-2">Телефон родителя</th></tr>
+            <tr><th className="px-4 py-2">Ученик</th><th className="px-4 py-2">Класс</th><th className="hidden px-4 py-2 sm:table-cell">Пансионат</th>
+              <th className="px-4 py-2">Статус</th><th className="hidden px-4 py-2 md:table-cell">Сейчас</th><th className="hidden px-4 py-2 lg:table-cell">Телефон родителя</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((s) => (
               <tr key={s.id} className="hover:bg-slate-50">
                 <td className="px-4 py-2.5"><Link to={`/students/${s.id}`} className="font-medium hover:text-indigo-700 hover:underline">{s.full_name}</Link></td>
                 <td className="px-4 py-2.5">{s.class_name}</td>
-                <td className="px-4 py-2.5">{s.is_boarder === null ? <span className="text-slate-400">не отмечено</span> : s.is_boarder ? "да" : "нет"}</td>
+                <td className="hidden px-4 py-2.5 sm:table-cell">{s.is_boarder === null ? <span className="text-slate-400">не отмечено</span> : s.is_boarder ? "да" : "нет"}</td>
                 <td className="px-4 py-2.5">
                   {s.student_status === "ENROLLING" ? <Badge className="bg-amber-100 text-amber-800 ring-amber-600/20">На приёме</Badge>
                     : s.student_status === "WITHDRAWN" ? <Badge className="bg-slate-100 text-slate-600 ring-slate-500/20">Выбыл</Badge>
                       : <Badge className="bg-emerald-100 text-emerald-800 ring-emerald-600/20">Учится</Badge>}
                 </td>
-                <td className="px-4 py-2.5">{s.student_status === "ACTIVE" ? <StatusBadge status={s.status} /> : <span className="text-slate-400">—</span>}</td>
-                <td className="px-4 py-2.5 tabular-nums text-slate-600">{s.parent_phone ?? "—"}</td>
+                <td className="hidden px-4 py-2.5 md:table-cell">{s.student_status === "ACTIVE" ? <StatusBadge status={s.status} /> : <span className="text-slate-400">—</span>}</td>
+                <td className="hidden px-4 py-2.5 tabular-nums text-slate-600 lg:table-cell">{s.parent_phone ?? "—"}</td>
               </tr>
             ))}
           </tbody>

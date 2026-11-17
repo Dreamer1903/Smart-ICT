@@ -6,6 +6,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
+  loginGoogle: (credential: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -28,12 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return t.user;
   }, []);
 
+  const loginGoogle = useCallback(async (credential: string) => {
+    const t = await api.loginGoogle(credential);
+    tokenStore.set(t.access_token);
+    setUser(t.user);
+    return t.user;
+  }, []);
+
   const logout = useCallback(() => {
     tokenStore.clear();
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, loginGoogle, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -74,6 +74,8 @@ export const api = {
   login: (email: string, password: string) =>
     request<Token>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   me: () => request<User>("/auth/me"),
+  authConfig: () => request<{ google_client_id: string | null; google_allowed_domains: string[] }>("/auth/config"),
+  loginGoogle: (credential: string) => request<Token>("/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
 
   classes: () => request<SchoolClass[]>("/classes"),
   students: (p: { search?: string; class_id?: number | null; limit?: number } = {}) => request<Student[]>(`/students${qs(p)}`),

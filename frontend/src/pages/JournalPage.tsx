@@ -1,7 +1,7 @@
 // Электронный журнал учителя: уроки по расписанию (тема, ДЗ, посещаемость, оценки с комментариями)
 // и ведомость (оценки за период, средний балл, итоговые: четверть, полугодие, год, аттестация).
 import { BookOpenCheck, ChevronLeft, ChevronRight, Loader2, Plus, Save, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,7 @@ export function JournalPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-bold"><BookOpenCheck className="size-6 text-indigo-600" /> Журнал</h1>
-        <Select className="w-80" value={key} onChange={(e) => setKey(e.target.value)}>
+        <Select className="w-full sm:w-80" value={key} onChange={(e) => setKey(e.target.value)}>
           {mine.map((m) => <option key={`${m.class_id}-${m.subject_id}`} value={`${m.class_id}-${m.subject_id}`}>
             {m.class_name} · {m.subject_name}{m.can_write ? "" : " (просмотр)"}</option>)}
         </Select>
@@ -66,6 +66,10 @@ function LessonsTab({ c }: { c: MyClass }) {
   const [week, setWeek] = useState(() => monday(new Date()));
   const [rows, setRows] = useState<LessonRow[]>([]);
   const [open, setOpen] = useState<{ date: string; slot: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {  // на телефоне панель урока под списком — прокручиваем к ней
+    if (open && window.innerWidth < 1024) panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [open]);
   const load = useCallback(async () => {
     const end = new Date(week); end.setDate(end.getDate() + 6);
     setRows(await http.get<LessonRow[]>("/journal/lessons", { class_id: c.class_id, subject_id: c.subject_id, date_from: iso(week), date_to: iso(end) }));
@@ -95,8 +99,10 @@ function LessonsTab({ c }: { c: MyClass }) {
           ))}
         </CardContent>
       </Card>
-      {open ? <LessonPanel c={c} date={open.date} slot={open.slot} onSaved={load} /> :
-        <Card><CardContent className="py-16 text-center text-slate-500">Выберите урок слева</CardContent></Card>}
+      <div ref={panelRef} className="scroll-mt-16">
+        {open ? <LessonPanel c={c} date={open.date} slot={open.slot} onSaved={load} /> :
+          <Card><CardContent className="py-16 text-center text-slate-500">Выберите урок в списке</CardContent></Card>}
+      </div>
     </div>
   );
 }
@@ -155,18 +161,17 @@ function LessonPanel({ c, date, slot, onSaved }: { c: MyClass; date: string; slo
           <Input placeholder="Тема урока" value={topic} onChange={(e) => setTopic(e.target.value)} disabled={!c.can_write} />
           <Input placeholder="Домашнее задание (увидят ученики и родители)" value={homework} onChange={(e) => setHomework(e.target.value)} disabled={!c.can_write} />
         </div>
-        <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>✓ присутствует · <b className="text-amber-600">оп</b> опоздал · <b className="text-rose-600">н</b> нет · ув — уважительная. О «н» и «оп» сразу узнают классный руководитель, куратор, завуч по воспитательной части и родители.</span>
-          {c.can_write && <Button size="sm" variant="ghost" onClick={allPresent}>Все присутствуют</Button>}
+          {c.can_write && <Button size="sm" variant="outline" className="shrink-0" onClick={allPresent}>Все присутствуют</Button>}
         </div>
         {data.students.length === 0 && <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500">В классе пока нет учеников. Загрузите их в разделе «Ученики».</p>}
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 text-sm">
             {data.students.map((s, i) => (
-              <tr key={s.id}>
-                <td className="w-6 py-1.5 text-xs text-slate-400">{i + 1}</td>
-                <td className="py-1.5 font-medium">{s.full_name}</td>
-                <td className="py-1.5">
+              <div key={s.id} className="grid grid-cols-[1.5rem_1fr] items-center gap-x-2 gap-y-1.5 py-2 md:grid-cols-[1.5rem_minmax(10rem,1fr)_auto_minmax(8rem,1fr)]">
+                <div className="text-xs text-slate-400">{i + 1}</div>
+                <div className="font-medium">{s.full_name}</div>
+                <div className="col-start-2 md:col-start-auto">
                   <div className="flex items-center gap-1">
                     {MARKS.map(([m, label, color]) => (
                       <button key={m} disabled={!c.can_write} onClick={() => setMarks({ ...marks, [s.id]: { ...marks[s.id], mark: marks[s.id]?.mark === m ? null : m } })}
@@ -175,19 +180,19 @@ function LessonPanel({ c, date, slot, onSaved }: { c: MyClass; date: string; slo
                     {marks[s.id]?.mark === "LATE" && <Input className="h-7 w-16 text-xs" placeholder="мин" value={marks[s.id].late}
                       onChange={(e) => setMarks({ ...marks, [s.id]: { ...marks[s.id], late: e.target.value } })} />}
                   </div>
-                </td>
-                <td className="py-1.5">
+                </div>
+                <div className="col-start-2 md:col-start-auto">
                   <div className="flex flex-wrap items-center gap-1">
                     {s.grades.map((g) => (
                       <span key={g.id} title={`${KIND[g.kind]}${g.comment ? `: ${g.comment}` : ""}`}
                         className={cn("group inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-bold text-white", gradeColor(g.value))}>
                         {g.value}{g.comment && <span className="font-normal">*</span>}
-                        {c.can_write && <button className="hidden cursor-pointer group-hover:inline" onClick={() => delGrade(g.id)}><X className="size-3" /></button>}
+                        {c.can_write && <button className="cursor-pointer opacity-60 hover:opacity-100 md:hidden md:group-hover:inline" title="Удалить оценку" onClick={() => delGrade(g.id)}><X className="size-3" /></button>}
                       </span>
                     ))}
                     {c.can_write && adding !== s.id && <button className="cursor-pointer rounded p-0.5 text-slate-400 hover:bg-slate-100" onClick={() => setAdding(s.id)}><Plus className="size-4" /></button>}
                     {adding === s.id && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex flex-wrap items-center gap-1">
                         <Select className="h-7 w-14 text-xs" value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })}>
                           {Array.from({ length: data.grade_max }, (_, k) => data.grade_max - k).map((v) => <option key={v}>{v}</option>)}
                         </Select>
@@ -200,12 +205,11 @@ function LessonPanel({ c, date, slot, onSaved }: { c: MyClass; date: string; slo
                       </span>
                     )}
                   </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        {c.can_write && <Button onClick={saveAll}><Save className="size-4" /> Сохранить урок и посещаемость</Button>}
+        </div>
+        {c.can_write && <Button className="w-full sm:w-auto" onClick={saveAll}><Save className="size-4" /> Сохранить урок и посещаемость</Button>}
       </CardContent>
     </Card>
   );
