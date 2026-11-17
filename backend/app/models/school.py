@@ -33,10 +33,11 @@ class SchoolClass(Base):
     homeroom_teacher_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    curator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))  # куратор класса
     classroom_id: Mapped[int | None] = mapped_column(ForeignKey("classrooms.id", ondelete="SET NULL"))
 
     students: Mapped[list["Student"]] = relationship(back_populates="school_class")
-    homeroom_teacher: Mapped["User | None"] = relationship()
+    homeroom_teacher: Mapped["User | None"] = relationship(foreign_keys=[homeroom_teacher_id])
     classroom: Mapped[ClassRoom | None] = relationship()
 
 
@@ -45,3 +46,9 @@ class Subject(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True)
+    short_name: Mapped[str | None] = mapped_column(String(16))
+    # Предмет идёт только в своём кабинете (биология, информатика, физика): кабинет один —
+    # значит такие уроки не могут стоять параллельно в разных классах.
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("classrooms.id", ondelete="SET NULL"))
+
+    room: Mapped[ClassRoom | None] = relationship()

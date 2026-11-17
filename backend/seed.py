@@ -22,8 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import commit_and_dispatch
 from app.core.security import hash_password
-from app.db.base import Base, utcnow
-from app.db.session import SessionLocal, engine
+from app.db.base import utcnow
+from app.db.session import SessionLocal, engine, recreate_schema
 from app.models import (
     AccessDevice,
     EnrollmentStepKind,
@@ -72,7 +72,7 @@ def _surname(full_name: str) -> str:
     return sur[:-1] if sur.endswith("а") else sur
 
 
-async def seed(session: AsyncSession) -> dict[str, int]:
+async def seed(session: AsyncSession, with_timetable: bool = True) -> dict[str, int]:
     now = utcnow()
 
     # --- справочники
@@ -190,6 +190,18 @@ async def seed(session: AsyncSession) -> dict[str, int]:
     await enrollment_svc.complete_step(session, cashier, e2, EnrollmentStepKind.PAYMENT_SETUP,
                                        {"external_1c_id": "LS-0022", "contract_number": "Д-2026/022"}, None)
 
+    # --- учебная часть: предметы, учителя, нагрузка, пожелания, ученик и родитель
+    from seed_academic import seed_academic
+
+    await seed_academic(session, {u.email: u for u in users})
+    if with_timetable:  # помощник составляет и публикует расписание
+        from app.services import timetable_db
+
+        admin = next(u for u in users if u.role is UserRole.SUPER_ADMIN)
+        version, problems, _ = await timetable_db.generate(session, admin, "Основное расписание", None, 15)
+        assert version is not None, problems
+        await timetable_db.publish(session, version)
+
     # --- сверка: «потерявшийся» в здании получит флаг DISCREPANCY
     await presence.recompute_discrepancies(session, now)
     await commit_and_dispatch(session)
@@ -199,10 +211,7 @@ async def seed(session: AsyncSession) -> dict[str, int]:
 async def main(reset: bool) -> None:
     import app.models  # noqa: F401 — регистрирует модели в metadata
 
-    async with engine.begin() as conn:
-        if reset:
-            await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    await recreate_schema(drop=reset)
 
     async with SessionLocal() as session:
         if not reset and (await session.scalar(select(func.count(User.id)))):

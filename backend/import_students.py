@@ -16,8 +16,7 @@ from sqlalchemy import func, select
 
 import app.models  # noqa: F401
 from app.core.security import hash_password
-from app.db.base import Base
-from app.db.session import SessionLocal, engine
+from app.db.session import SessionLocal, engine, recreate_schema
 from app.models import User, UserRole
 from app.services.importer import ImportError_, import_students
 
@@ -28,10 +27,7 @@ async def main(path: Path, apply: bool, fresh: bool) -> None:
         hint = "\n".join(f"    {p}" for p in excel[:10]) or "    (файлов .xlsx нет)"
         raise SystemExit(f"Файл не найден: {path}\nФайлы Excel в папке {path.parent}:\n{hint}\n"
                          "Совет: перетащите файл мышкой в это окно — путь вставится сам.")
-    async with engine.begin() as conn:
-        if fresh:
-            await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    await recreate_schema(drop=fresh)
 
     async with SessionLocal() as session:
         accounts = []

@@ -13,6 +13,10 @@ class UserRole(StrEnum):
     PARENT_RELATIONS = "ParentRelations"  # завуч по работе с родителями
     ADMISSIONS = "Admissions"  # менеджер по приёму учеников
     CASHIER = "Cashier"  # кассир / бухгалтерия
+    ZAVUCH_ACADEMIC = "ZavuchAcademic"  # завуч по учебной части (расписание, журнал)
+    ZAVUCH_UPBRINGING = "ZavuchUpbringing"  # завуч по воспитательной части (посещаемость, опоздания)
+    STUDENT = "Student"
+    PARENT = "Parent"
 
 
 class GateDirection(StrEnum):
@@ -98,3 +102,56 @@ class EnrollmentStepKind(StrEnum):
 class StepStatus(StrEnum):
     PENDING = "PENDING"
     DONE = "DONE"
+
+
+class TimetableStatus(StrEnum):
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    ARCHIVED = "ARCHIVED"
+
+
+class ProposalStatus(StrEnum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+
+class AttendanceMark(StrEnum):
+    PRESENT = "PRESENT"
+    ABSENT = "ABSENT"
+    LATE = "LATE"
+    EXCUSED = "EXCUSED"  # отсутствует по уважительной причине
+
+
+class GradeKind(StrEnum):
+    CLASSWORK = "CLASSWORK"  # работа на уроке
+    HOMEWORK = "HOMEWORK"
+    ORAL = "ORAL"  # устный ответ
+    TEST = "TEST"  # самостоятельная / тест
+    CONTROL = "CONTROL"  # контрольная
+
+
+class PeriodCode(StrEnum):
+    Q1 = "Q1"
+    Q2 = "Q2"
+    Q3 = "Q3"
+    Q4 = "Q4"
+    H1 = "H1"  # 1-е полугодие
+    H2 = "H2"
+    YEAR = "YEAR"
+    FINAL = "FINAL"  # итоговая аттестация
+
+
+class MaterialKind(StrEnum):
+    LESSON_PLAN = "LESSON_PLAN"  # поурочный план
+    OUTLINE = "OUTLINE"  # план-конспект
+    BOOK = "BOOK"
+    CARDS = "CARDS"  # карточки
+    PRESENTATION = "PRESENTATION"
+    OTHER = "OTHER"
+
+
+class Visibility(StrEnum):
+    PRIVATE = "PRIVATE"  # только автор
+    TEACHERS = "TEACHERS"  # все учителя
+    ALL = "ALL"  # учителя и ученики

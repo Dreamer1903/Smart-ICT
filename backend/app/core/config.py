@@ -35,7 +35,12 @@ class Settings(BaseSettings):
     discrepancy_grace_minutes: int = 10
     school_timezone: str = "Asia/Tashkent"
     daily_reset_hour: int = 4
-    school_start_time: str = "08:30"  # пришёл позже — «опоздал» в отчёте посещаемости
+    school_start_time: str = "08:30"
+    school_days: str = "1,2,3,4,5"  # учебные дни недели (1 = пн … 6 = сб)
+    timetable_time_limit_seconds: float = 60.0  # 25 классов ≈ 60 с
+    library_dir: str = str(BASE_DIR / "storage" / "library")
+    library_max_mb: int = 50
+    grade_max: int = 5  # шкала оценок 1…grade_max  # пришёл позже — «опоздал» в отчёте посещаемости
 
     # ---------------- Контроль доступа
     access_always_allow_exit: bool = True  # выход НИКОГДА не блокируется (пожарная безопасность)
@@ -121,6 +126,10 @@ class Settings(BaseSettings):
     @property
     def sms_event_set(self) -> set[str]:
         return self._csv(self.notify_sms_events)
+
+    @property
+    def school_day_list(self) -> list[int]:
+        return sorted({int(d) for d in self.school_days.split(",") if d.strip().isdigit()})
 
     @property
     def cors_origin_list(self) -> list[str]:

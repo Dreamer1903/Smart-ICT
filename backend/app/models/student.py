@@ -59,5 +59,6 @@ class Guardian(Base):
     phone: Mapped[str | None] = mapped_column(String(32))
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64))
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)  # основной контакт для уведомлений
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)  # вход родителя
 
     student: Mapped["Student"] = relationship(back_populates="guardians")

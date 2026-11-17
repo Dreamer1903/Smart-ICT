@@ -17,7 +17,7 @@ from app.services.dashboard import build_live_pulse
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-VIEWERS = (UserRole.DIRECTOR, UserRole.ZAVUCH, UserRole.DUTY_TEACHER)
+VIEWERS = (UserRole.DIRECTOR, UserRole.ZAVUCH, UserRole.ZAVUCH_ACADEMIC, UserRole.ZAVUCH_UPBRINGING, UserRole.DUTY_TEACHER)
 HEARTBEAT_SECONDS = 15
 
 
@@ -36,6 +36,7 @@ async def stream(
     token: Annotated[str, Query(description="JWT (EventSource не умеет слать заголовки)")],
 ) -> StreamingResponse:
     user = await user_from_token(db, token)  # поток доступен всем сотрудникам (уведомления, приём, пульс)
+    family = user.role in (UserRole.STUDENT, UserRole.PARENT)  # ученикам/родителям — только их уведомления
     await db.close()  # соединение с БД стриму не нужно
 
     queue = event_bus.subscribe()
@@ -50,6 +51,8 @@ async def stream(
                     event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
                 except TimeoutError:
                     yield ": heartbeat\n\n"
+                    continue
+                if family and not (event.type == "staff.notification" and event.payload.get("user_id") == user.id):
                     continue
                 yield f"event: {event.type}\ndata: {json.dumps(event.to_dict(), ensure_ascii=False)}\n\n"
         finally:

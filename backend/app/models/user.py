@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, UTCDateTime, str_enum, utcnow
@@ -20,4 +20,8 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(32))
     hashed_password: Mapped[str] = mapped_column(String(255))
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64))  # для уведомлений сотруднику
+    # Учётная запись ученика (роль Student). use_alter — разрывает цикл users ↔ students при создании/удалении схемы.
+    student_id: Mapped[int | None] = mapped_column(
+        ForeignKey("students.id", ondelete="CASCADE", use_alter=True, name="fk_users_student_id_students")
+    )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

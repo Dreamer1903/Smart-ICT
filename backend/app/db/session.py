@@ -26,3 +26,19 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     """FastAPI-зависимость: одна сессия на запрос."""
     async with SessionLocal() as session:
         yield session
+
+
+async def recreate_schema(drop: bool = True) -> None:
+    """Пересоздать все таблицы (seed, тесты, чистая загрузка). Для SQLite на время удаления
+    отключаются проверки внешних ключей — между таблицами есть циклические ссылки."""
+    import app.models  # noqa: F401 — регистрация моделей
+    from app.db.base import Base
+
+    async with engine.begin() as conn:
+        if drop:
+            if settings.is_sqlite:
+                await conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            await conn.run_sync(Base.metadata.drop_all)
+            if settings.is_sqlite:
+                await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+        await conn.run_sync(Base.metadata.create_all)

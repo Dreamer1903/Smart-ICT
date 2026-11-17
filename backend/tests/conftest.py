@@ -15,19 +15,16 @@ import httpx  # noqa: E402
 import pytest  # noqa: E402
 
 import app.models  # noqa: E402,F401
-from app.db.base import Base  # noqa: E402
-from app.db.session import SessionLocal, engine  # noqa: E402
+from app.db.session import SessionLocal, engine, recreate_schema  # noqa: E402
 from app.main import app  # noqa: E402
 from seed import DEFAULT_PASSWORD, seed  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 async def fresh_db() -> AsyncIterator[None]:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    await recreate_schema()
     async with SessionLocal() as session:
-        await seed(session)
+        await seed(session, with_timetable=False)  # расписание — отдельной фикстурой (решатель тратит секунды)
     yield
 
 
@@ -46,3 +43,19 @@ def login(client: httpx.AsyncClient):  # type: ignore[no-untyped-def]
         return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
     return _login
+
+
+@pytest.fixture
+async def timetable() -> None:
+    """Составить и опубликовать расписание помощником (для тестов журнала и расписания)."""
+    from sqlalchemy import select
+
+    from app.models import User, UserRole
+    from app.services import timetable_db
+
+    async with SessionLocal() as session:
+        admin = (await session.execute(select(User).where(User.role == UserRole.SUPER_ADMIN))).scalar_one()
+        version, problems, _ = await timetable_db.generate(session, admin, "Тестовое расписание", None, 10)
+        assert version is not None, problems
+        await timetable_db.publish(session, version)
+        await session.commit()
