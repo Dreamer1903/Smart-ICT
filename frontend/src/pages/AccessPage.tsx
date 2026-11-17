@@ -1,5 +1,5 @@
 // «Контроль доступа»: журнал решений турникетов, должники (1С), временные пропуска,
-// проверка прохода и состояние интеграций (1С / Robi / Telegram / SMS). Live через SSE.
+// проверка прохода и состояние интеграций (1С / HikCentral / Telegram / SMS). Live через SSE.
 import {
   Ban, CircleDollarSign, Clock, CreditCard, DoorClosed, DoorOpen, Gauge, Loader2, LogIn, LogOut, Radio,
   RefreshCw, ShieldCheck, ShieldX, Ticket, Wallet,
@@ -16,7 +16,7 @@ import type {
 } from "@/lib/types";
 import { cn, formatMoney, formatTime, minutesAgo } from "@/lib/utils";
 
-const INTEGRATION_LABEL: Record<string, string> = { "1c": "1С (оплата)", hikcentral: "HikCentral (терминалы)", robi: "Robi (посещаемость)", telegram: "Telegram", sms: "SMS-шлюз" };
+const INTEGRATION_LABEL: Record<string, string> = { "1c": "1С (оплата)", hikcentral: "HikCentral (терминалы)", telegram: "Telegram", sms: "SMS-шлюз" };
 const ADAPTER_LABEL: Record<string, string> = { HIKCENTRAL: "HikCentral", RESPONSE: "REST (ответ)", HTTP: "HTTP-команда", WEBSOCKET: "WebSocket", TCP: "TCP" };
 
 function Kpi({ icon: Icon, label, value, hint, tone }: {
@@ -93,7 +93,7 @@ export function AccessPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold"><ShieldCheck className="size-6 text-indigo-600" /> Контроль доступа</h1>
-          <p className="text-sm text-slate-500">1С → SchoolOS → права в HikCentral / решение OPEN·DENY → журнал, Robi, родители</p>
+          <p className="text-sm text-slate-500">1С → SchoolOS → права в HikCentral / решение OPEN·DENY → журнал, родители</p>
         </div>
         <div className="flex items-center gap-2">
           {toast && (
@@ -119,7 +119,7 @@ export function AccessPage() {
         <Kpi icon={Gauge} label="Время решения" value={summary.avg_latency_ms !== null ? `${Math.round(summary.avg_latency_ms)} мс` : "—"}
           tone="bg-indigo-100 text-indigo-700" hint="среднее за сегодня" />
         <Kpi icon={Clock} label="Очередь доставки" value={summary.outbox_pending} tone="bg-sky-100 text-sky-700"
-          hint={summary.outbox_failed ? `не доставлено: ${summary.outbox_failed}` : "Robi и уведомления"} />
+          hint={summary.outbox_failed ? `не доставлено: ${summary.outbox_failed}` : "уведомления"} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">

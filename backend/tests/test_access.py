@@ -1,5 +1,5 @@
 """Интеграционные тесты контура доступа: контроллер → SchoolOS → 1С → решение → контроллер,
-outbox → Robi / Telegram, вебхук 1С, политики недоступности 1С, TCP-протокол.
+outbox → Telegram, вебхук 1С, политики недоступности 1С, TCP-протокол.
 
 Внешние системы — реальное HTTP-приложение simulators.app через ASGITransport."""
 
@@ -20,7 +20,6 @@ from app.integrations.health import health
 from app.integrations.notify import TelegramNotifier
 from app.integrations.onec import OneCHttpProvider
 from app.integrations.registry import integrations
-from app.integrations.robi import RobiClient
 from app.models import OutboxMessage, OutboxStatus, PaymentStatusRecord, Student
 from app.services.outbox import process_outbox
 from simulators import app as sim
@@ -39,13 +38,11 @@ class SimTransport(httpx.ASGITransport):
 @pytest.fixture(autouse=True)
 def external_world(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     sim.ledger.reset()
-    sim.robi_events.clear()
     sim.controller_commands.clear()
     sim.messages.clear()
     health.states.clear()
     t = SimTransport()
     monkeypatch.setattr(integrations, "payment", OneCHttpProvider("http://sim/1c", transport=t))
-    monkeypatch.setattr(integrations, "robi", RobiClient("http://sim/robi", transport=t))
     monkeypatch.setattr(integrations, "telegram", TelegramNotifier("TEST", "http://sim/telegram", transport=t))
     monkeypatch.setattr(integrations, "commander", ControllerCommander(transport=t))
     yield
@@ -155,30 +152,23 @@ async def test_override_lets_debtor_in(client, login):
     assert (await _event(client, "RFID-0003")).json()["reason"] == "DEBT"
 
 
-async def test_outbox_delivers_to_robi_and_telegram_with_retry(client, monkeypatch):
+async def test_outbox_delivers_telegram_with_retry(client, monkeypatch):
     monkeypatch.setattr(settings, "notify_channels", "log,telegram")
-    async with SessionLocal() as s:  # утренние события seed уже в outbox
-        await process_outbox(s, limit=500)
-    robi_before = len(sim.robi_events)
-    assert robi_before == 16  # 15 входов + 1 выход
-
     await _event(client, "RFID-0009")
     async with SessionLocal() as s:
-        await process_outbox(s)
-    ev = sim.robi_events[-1]
-    assert ev["robi_student_id"] == "R-0009" and ev["direction"] == "IN" and ev["event_id"].startswith("schoolos-")
+        await process_outbox(s, limit=500)
     assert any(m["channel"] == "telegram" and m["chat_id"] == "100000009" and "пришёл(ла) в школу" in m["text"]
                for m in sim.messages)
 
-    # Robi недоступна → сообщение остаётся PENDING с отложенной повторной попыткой
-    monkeypatch.setattr(integrations, "robi", RobiClient("http://127.0.0.1:1"))
+    # Telegram недоступен → сообщение остаётся PENDING с отложенной повторной попыткой
+    monkeypatch.setattr(integrations, "telegram", TelegramNotifier("TEST", "http://127.0.0.1:1"))
     await _event(client, "RFID-0010")
     async with SessionLocal() as s:
         await process_outbox(s)
-        msg = (await s.execute(select(OutboxMessage).where(OutboxMessage.channel == "robi")
+        msg = (await s.execute(select(OutboxMessage).where(OutboxMessage.channel == "telegram")
                                .order_by(OutboxMessage.id.desc()).limit(1))).scalar_one()
         assert msg.status is OutboxStatus.PENDING and msg.attempts == 1 and msg.next_attempt_at > utcnow()
-    assert health.states["robi"].healthy is False
+    assert health.states["telegram"].healthy is False
 
 
 async def test_recheck_job_detects_payment(client):

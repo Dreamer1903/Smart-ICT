@@ -106,7 +106,7 @@ frontend/src/
 
 ---
 
-# Интеграция: турникеты + 1С + Robi + уведомления
+# Интеграция: турникеты + 1С + уведомления
 
 ## Схема
 
@@ -119,7 +119,7 @@ frontend/src/
             │              Service Payment ──HTTP──► 1С                │ 4. есть долг? (кэш 5 мин, таймаут 1.5 с)
             │                      │                                   │
             ▼                      ▼                                   │
-   Команда OPEN / DENY      Журнал access_events ── outbox ──► Robi (посещаемость)
+   Команда OPEN / DENY      Журнал access_events ── outbox ──► уведомления
    → контроллер → турникет  Live-статус (Пульс)           └──► Telegram / SMS родителям, администрации
 ```
 
@@ -133,7 +133,7 @@ SchoolOS **никогда не управляет турникетом напр�
 |---|---|
 | Service Access Control | `app/services/access.py`, `app/integrations/controllers.py`, `tcp_listener.py`, `api/v1/access.py` |
 | Service Payment (1С) | `app/services/payment.py`, `app/integrations/onec.py` |
-| Service Attendance (Robi) | `app/integrations/robi.py` + outbox |
+| Service Attendance | собственный электронный журнал SchoolOS |
 | Service Notification | `app/integrations/notify.py`, `app/services/outbox.py` |
 | Service API | FastAPI `/api/v1`, Swagger `/docs` |
 
@@ -187,13 +187,11 @@ curl -X POST localhost:8000/api/v1/access/events -H 'X-Gate-Api-Key: dev-gate-ke
 * **1С**: `GET {ONEC_BASE_URL}/students/{account}/balance` (Basic Auth) →
   `{"account":"LS-0001","debt":150000,"currency":"UZS","paid_until":"2026-12-01"}`.
   Ученик связан с 1С через `Student.external_1c_id` (лицевой счёт).
-* **Robi**: `POST {ROBI_BASE_URL}/attendance/events` (Bearer) — по каждому разрешённому проходу;
-  `event_id` — ключ идемпотентности, 409 считается успехом.
 * **Telegram**: Bot API `sendMessage` на `Student.parent_telegram_chat_id`; **SMS**: универсальный HTTP-шлюз.
   Какие события уходят в каждый канал — `NOTIFY_TELEGRAM_EVENTS`, `NOTIFY_SMS_EVENTS`.
 
 Все исходящие сообщения пишутся в `outbox_messages` в той же транзакции, что и решение, и доставляются
-фоновым воркером с экспоненциальными повторами (до `OUTBOX_MAX_ATTEMPTS`). Падение Robi или Telegram
+фоновым воркером с экспоненциальными повторами (до `OUTBOX_MAX_ATTEMPTS`). Падение Telegram или SMS-шлюза
 не влияет на работу турникета.
 
 ## Локальный запуск всей цепочки
@@ -201,7 +199,7 @@ curl -X POST localhost:8000/api/v1/access/events -H 'X-Gate-Api-Key: dev-gate-ke
 ```bash
 cd backend
 python seed.py --reset
-uvicorn simulators.app:app --port 8010 &      # «внешний мир»: 1С, Robi, контроллер, SMS, Telegram
+uvicorn simulators.app:app --port 8010 &      # «внешний мир»: 1С, HikCentral, контроллер, SMS, Telegram
 TCP_LISTENER_ENABLED=true uvicorn app.main:app --port 8000
 cd ../frontend && npm run dev                  # «Контроль доступа» → http://localhost:5173/access
 ```
@@ -225,7 +223,6 @@ cd ../frontend && npm run dev                  # «Контроль доступ
 
 1. Модель контроллеров турникетов и доступный у них способ интеграции (REST/WS/TCP/SDK).
 2. Публикация HTTP-сервиса в 1С по контракту выше (или документация существующего API 1С) и вебхук об оплате.
-3. API Robi (адрес, токен, формат событий) — текущий клиент подстраивается под него в `robi.py`.
 4. Telegram-бот для родителей (привязка `chat_id`) и договор с SMS-провайдером.
 
 ---
@@ -239,7 +236,7 @@ cd ../frontend && npm run dev                  # «Контроль доступ
 ```
 1С ──долг / оплата──► SchoolOS ──OpenAPI: уровни доступа──► HikCentral ──► терминалы
                           ▲                                       │
-                          └──────── события проходов (опрос / push) ┘ → журнал, Пульс, Robi, родители
+                          └──────── события проходов (опрос / push) ┘ → журнал, Пульс, родители
 ```
 
 * **Долг** → ученик переводится из уровня «Вход и выход» в «Только выход» (сначала даётся выход, потом забирается вход).
@@ -329,7 +326,7 @@ cd ../frontend && npm run dev                  # «Контроль доступ
 | GET / POST | `/notifications`, `/notifications/{id}/read`, `/notifications/read-all` | каждый — свои |
 
 **Что ещё не сделано:** если пансионер вне урока в учебное время, это пока не считается нарушением — для этого нужно
-расписание из Robi. Учителя видят все заявки на приём, а не только своего класса.
+расписание (делается в собственном модуле расписания). Учителя видят все заявки на приём, а не только своего класса.
 
 ---
 

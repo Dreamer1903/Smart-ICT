@@ -1,4 +1,4 @@
-"""Transactional outbox + доставка: Robi и уведомления с экспоненциальными повторами."""
+"""Transactional outbox + доставка уведомлений (Telegram, SMS) и команд HikCentral с экспоненциальными повторами."""
 
 import asyncio
 import logging
@@ -59,8 +59,6 @@ async def _deliver(msg: OutboxMessage, session: AsyncSession) -> None:
             from app.services.hik import apply_access
 
             await apply_access(session, int(p["student_id"]))
-        case "robi":
-            await integrations.robi.push_attendance(p)
         case "telegram":
             await integrations.telegram.send(p["to"], p["text"])
         case "sms":

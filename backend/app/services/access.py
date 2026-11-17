@@ -6,7 +6,7 @@
   3. Активный временный пропуск → разрешить.
   4. Запрос статуса оплаты в 1С (кэш TTL; при недоступности — политика cache/allow/deny).
   5. Нет долга → OPEN, есть долг → DENY.
-  6. Журнал решения, обновление Live-статуса, outbox → Robi и уведомления, событие в шину.
+  6. Журнал решения, обновление Live-статуса, outbox → уведомления, событие в шину.
 """
 
 import time
@@ -183,17 +183,8 @@ async def _record(
 
     time_str = at.astimezone(ZoneInfo(settings.school_timezone)).strftime("%H:%M")
     if decision is AccessDecision.GRANTED and student is not None:
-        # Факт прохода → Live-статус (presence), Robi, родителям
+        # Факт прохода → Live-статус (presence), уведомление родителям
         await presence.register_gate_pass(session, student.id, direction, at, gate_id=device.code)
-        if settings.robi_enabled:
-            outbox.enqueue(session, "robi", {
-                "event_id": f"schoolos-{event.id}",
-                "robi_student_id": student.robi_id,
-                "student_external_id": student.external_1c_id,
-                "direction": direction.value,
-                "timestamp": at.isoformat(),
-                "device": device.code,
-            })
         kind = "entry" if direction is GateDirection.IN else "exit"
         verb = "пришёл(ла) в школу" if direction is GateDirection.IN else "вышел(ла) из школы"
         outbox.notify_parent(session, student, kind, f"{student.full_name} {verb} в {time_str}.")

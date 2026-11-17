@@ -3,7 +3,6 @@
     uvicorn simulators.app:app --port 8010
 
   /1c/...         — HTTP-сервис 1С (баланс по лицевому счёту) + «касса» для внесения оплаты
-  /robi/...       — приём посещаемости Robi
   /controller/... — приём команд OPEN/DENY (для устройств с adapter=HTTP)
   /sms/send       — SMS-шлюз, /telegram/bot{token}/sendMessage — Telegram Bot API
 """
@@ -39,7 +38,6 @@ class Ledger:
 
 
 ledger = Ledger()
-robi_events: list[dict[str, Any]] = []
 controller_commands: list[dict[str, Any]] = []
 messages: list[dict[str, Any]] = []
 
@@ -103,26 +101,9 @@ async def availability(up: bool) -> dict[str, bool]:
 async def reset() -> dict[str, str]:
     ledger.reset()
     hik_state.reset()
-    robi_events.clear()
     controller_commands.clear()
     messages.clear()
     return {"status": "ok"}
-
-
-robi = APIRouter(prefix="/robi", tags=["Robi"])
-
-
-@robi.post("/attendance/events", status_code=201)
-async def robi_event(payload: dict[str, Any]) -> dict[str, str]:
-    if any(e["event_id"] == payload.get("event_id") for e in robi_events):
-        raise HTTPException(409, "duplicate")
-    robi_events.append({**payload, "received_at": datetime.now(UTC).isoformat()})
-    return {"status": "accepted"}
-
-
-@robi.get("/attendance/events")
-async def robi_list() -> list[dict[str, Any]]:
-    return robi_events
 
 
 controller = APIRouter(prefix="/controller", tags=["Контроллер"])
@@ -160,7 +141,7 @@ async def list_messages() -> list[dict[str, Any]]:
 
 
 app = FastAPI(title="SchoolOS — симулятор внешних систем")
-for r in (onec, robi, controller, notify):
+for r in (onec, controller, notify):
     app.include_router(r)
 
 

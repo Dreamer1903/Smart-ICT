@@ -119,7 +119,7 @@ class PaymentStatusRecord(Base):
 
 
 class OutboxMessage(Base):
-    """Transactional outbox: сообщения во внешние системы (Robi, Telegram, SMS) с повторами.
+    """Transactional outbox: сообщения во внешние системы (Telegram, SMS) с повторами.
 
     Пишется в той же транзакции, что и бизнес-событие, — ни одно событие не теряется,
     даже если внешняя система недоступна.
@@ -129,7 +129,7 @@ class OutboxMessage(Base):
     __table_args__ = (Index("ix_outbox_status_next", "status", "next_attempt_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    channel: Mapped[str] = mapped_column(String(32), index=True)  # robi | telegram | sms | log
+    channel: Mapped[str] = mapped_column(String(32), index=True)  # telegram | sms | log | hik
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     status: Mapped[OutboxStatus] = mapped_column(str_enum(OutboxStatus, "outbox_status"), default=OutboxStatus.PENDING)
     attempts: Mapped[int] = mapped_column(Integer, default=0)

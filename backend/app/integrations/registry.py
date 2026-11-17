@@ -5,7 +5,6 @@ from app.integrations.controllers import ControllerCommander
 from app.integrations.hikcentral import HikCentralClient
 from app.integrations.notify import LogNotifier, SmsNotifier, TelegramNotifier
 from app.integrations.onec import OneCHttpProvider, PaymentProvider
-from app.integrations.robi import RobiClient
 
 
 class Integrations:
@@ -13,7 +12,6 @@ class Integrations:
         self.payment: PaymentProvider = OneCHttpProvider(
             settings.onec_base_url, settings.onec_username, settings.onec_password, settings.onec_timeout_seconds
         )
-        self.robi = RobiClient(settings.robi_base_url, settings.robi_api_token)
         self.telegram = TelegramNotifier(settings.telegram_bot_token, settings.telegram_api_base)
         self.sms = SmsNotifier(settings.sms_gateway_url, settings.sms_gateway_token)
         self.log = LogNotifier()

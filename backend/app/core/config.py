@@ -52,10 +52,6 @@ class Settings(BaseSettings):
     payment_unavailable_policy: str = "cache"  # cache | allow | deny — что делать, если 1С не отвечает
     payment_recheck_interval_seconds: int = 300  # опрос 1С по должникам (страховка к вебхуку)
 
-    # ---------------- Robi (Service Attendance)
-    robi_enabled: bool = True
-    robi_base_url: str = "http://localhost:8010/robi"
-    robi_api_token: str = ""
 
     # ---------------- Уведомления (Service Notification)
     notify_channels: str = "log"  # log,telegram,sms

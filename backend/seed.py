@@ -9,7 +9,7 @@
   * проходы через турникеты, перекличка, визит в медпункт, ушедший домой ученик
     и «потерявшийся» в здании ученик (DISCREPANCY);
   * приём: 2 новых ученика в процессе зачисления, пансионеры, родители у каждого ученика;
-  * интеграции: лицевые счета 1С (LS-0001…), Robi ID, RFID/QR-идентификаторы, 4 контроллера;
+  * интеграции: лицевые счета 1С (LS-0001…), RFID/QR-идентификаторы, 4 контроллера;
     3 должника (см. simulators/ledger.py) получают отказ на турникете, плюс 1 неизвестная карта.
 """
 
@@ -102,7 +102,6 @@ async def seed(session: AsyncSession) -> dict[str, int]:
             parent_phone=f"+99890{1000000 + idx:07d}",
             parent_telegram_chat_id=str(100000000 + idx),
             external_1c_id=account_for(idx),
-            robi_id=f"R-{idx:04d}",
             birth_date=date(2011, (idx % 12) + 1, (idx % 27) + 1),
             admission_date=date(2023, 9, 1),
             is_boarder=idx in BOARDERS,
