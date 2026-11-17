@@ -1,7 +1,10 @@
 // Типы, зеркалирующие Pydantic-схемы backend/app/schemas
 
-export type UserRole = "SuperAdmin" | "Director" | "Zavuch" | "Teacher" | "Nurse" | "DutyTeacher";
-export type LocationStatus = "IN_BUILDING" | "IN_CLASS" | "IN_NURSE" | "LEFT_SCHOOL" | "UNKNOWN";
+export type UserRole =
+  | "SuperAdmin" | "Director" | "Zavuch" | "Teacher" | "Nurse" | "DutyTeacher"
+  | "ParentRelations" | "Admissions" | "Cashier";
+export type LocationStatus = "IN_BUILDING" | "IN_CLASS" | "IN_NURSE" | "IN_BOARDING" | "LEFT_SCHOOL" | "UNKNOWN";
+export type StudentStatus = "ENROLLING" | "ACTIVE" | "WITHDRAWN";
 export type NurseOutcome = "RESTING" | "SENT_HOME" | "RETURNED_TO_CLASS";
 export type GateDirection = "IN" | "OUT";
 
@@ -35,6 +38,8 @@ export interface Student {
   rfid_card_id: string | null;
   parent_phone: string | null;
   status: LocationStatus;
+  student_status: StudentStatus;
+  is_boarder: boolean | null;
 }
 
 export interface NurseVisit {
@@ -57,6 +62,7 @@ export interface PulseCounters {
   in_building: number;
   in_class: number;
   in_nurse: number;
+  in_boarding: number;
   not_reached_class: number;
   discrepancies: number;
   left_school: number;
@@ -70,6 +76,7 @@ export interface ClassPulse {
   in_class: number;
   in_nurse: number;
   not_reached_class: number;
+  in_boarding: number;
   absent: number;
 }
 
@@ -85,6 +92,7 @@ export interface StudentLiveRow {
   last_gate_direction: GateDirection | null;
   last_gate_at: string | null;
   active_nurse_visit_id: number | null;
+  is_boarder: boolean;
 }
 
 export interface LivePulse {
@@ -225,4 +233,101 @@ export interface PaymentCheckResult {
   source: string;
   error: string | null;
   reopened_event_id: number | null;
+}
+
+// ---------------- Приём учеников и карточка
+export type StepKind = "REGISTRATION" | "PAYMENT_SETUP" | "CLASS_ACCEPTANCE" | "ACCESS_SETUP";
+
+export interface EnrollmentStep {
+  kind: StepKind;
+  label: string;
+  status: "PENDING" | "DONE";
+  assignee_role: UserRole;
+  assignee_name: string | null;
+  completed_by_name: string | null;
+  completed_at: string | null;
+  comment: string | null;
+  data: Record<string, unknown> | null;
+  can_complete: boolean;
+}
+
+export interface Enrollment {
+  id: number;
+  status: "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  created_at: string;
+  completed_at: string | null;
+  created_by_name: string | null;
+  student: { id: number; full_name: string; class_id: number; class_name: string; birth_date: string | null; status: StudentStatus };
+  steps: EnrollmentStep[];
+  done_steps: number;
+  total_steps: number;
+  my_pending: boolean;
+}
+
+export interface GuardianIn {
+  full_name: string;
+  relation?: string | null;
+  phone?: string | null;
+  telegram_chat_id?: string | null;
+  is_primary?: boolean;
+}
+
+export interface Guardian extends GuardianIn { id: number }
+
+export interface StudentCard {
+  id: number;
+  full_name: string;
+  status: StudentStatus;
+  class_id: number;
+  class_name: string;
+  homeroom_teacher: string | null;
+  birth_date: string | null;
+  admission_date: string | null;
+  is_boarder: boolean | null;
+  boarding_room: string | null;
+  notes: string | null;
+  external_1c_id: string | null;
+  hik_person_id: string | null;
+  rfid_card_id: string | null;
+  guardians: Guardian[];
+  presence_status: LocationStatus;
+  presence_note: string | null;
+  presence_since: string | null;
+  is_discrepancy: boolean;
+  payment: { has_debt: boolean; debt_amount: number; currency: string; paid_until: string | null; checked_at: string } | null;
+  enrollment: Enrollment | null;
+  history: { date: string; first_in: string | null; last_out: string | null; passes: number; late: boolean }[];
+  recent_events: { occurred_at: string; direction: GateDirection; decision: string; reason_label: string; device_name: string | null }[];
+  nurse_visits: { start_time: string; end_time: string | null; reason: string; outcome: NurseOutcome }[];
+  timeline: { at: string; kind: string; text: string; actor_name: string | null }[];
+}
+
+export interface StaffNotification {
+  id: number;
+  created_at: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+}
+
+export interface AttendanceRow {
+  student_id: number;
+  full_name: string;
+  class_id: number;
+  class_name: string;
+  is_boarder: boolean;
+  first_in: string | null;
+  last_out: string | null;
+  passes: number;
+  denied: number;
+  late: boolean;
+  came: boolean;
+}
+
+export interface AttendanceReport {
+  date: string;
+  school_start_time: string;
+  summary: { total: number; came: number; late: number; absent: number; boarders: number };
+  rows: AttendanceRow[];
 }

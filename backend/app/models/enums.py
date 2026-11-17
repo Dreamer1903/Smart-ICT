@@ -10,6 +10,9 @@ class UserRole(StrEnum):
     TEACHER = "Teacher"
     NURSE = "Nurse"
     DUTY_TEACHER = "DutyTeacher"
+    PARENT_RELATIONS = "ParentRelations"  # завуч по работе с родителями
+    ADMISSIONS = "Admissions"  # менеджер по приёму учеников
+    CASHIER = "Cashier"  # кассир / бухгалтерия
 
 
 class GateDirection(StrEnum):
@@ -27,6 +30,7 @@ class LocationStatus(StrEnum):
     IN_BUILDING = "IN_BUILDING"  # прошёл турникет, но не в классе
     IN_CLASS = "IN_CLASS"
     IN_NURSE = "IN_NURSE"
+    IN_BOARDING = "IN_BOARDING"  # в пансионате (пансионат находится в здании школы)
     LEFT_SCHOOL = "LEFT_SCHOOL"
     UNKNOWN = "UNKNOWN"  # сегодня ещё не появлялся
 
@@ -70,3 +74,27 @@ class OutboxStatus(StrEnum):
     PENDING = "PENDING"
     SENT = "SENT"
     FAILED = "FAILED"
+
+
+class StudentStatus(StrEnum):
+    ENROLLING = "ENROLLING"  # идёт приём: ещё не все этапы закрыты
+    ACTIVE = "ACTIVE"  # учится
+    WITHDRAWN = "WITHDRAWN"  # выбыл
+
+
+class EnrollmentStatus(StrEnum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class EnrollmentStepKind(StrEnum):
+    REGISTRATION = "REGISTRATION"  # анкета и родители (менеджер / завуч по работе с родителями)
+    PAYMENT_SETUP = "PAYMENT_SETUP"  # лицевой счёт 1С и договор (кассир)
+    CLASS_ACCEPTANCE = "CLASS_ACCEPTANCE"  # принят в класс + пансионат (классный руководитель)
+    ACCESS_SETUP = "ACCESS_SETUP"  # лицо / ладонь в HikCentral (администратор СКУД)
+
+
+class StepStatus(StrEnum):
+    PENDING = "PENDING"
+    DONE = "DONE"

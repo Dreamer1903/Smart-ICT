@@ -1,4 +1,4 @@
-from app.models.enums import LocationStatus
+from app.models.enums import LocationStatus, StudentStatus
 from app.schemas.common import ORMModel
 
 
@@ -30,3 +30,5 @@ class StudentOut(ORMModel):
     rfid_card_id: str | None = None
     parent_phone: str | None = None
     status: LocationStatus = LocationStatus.UNKNOWN
+    student_status: StudentStatus = StudentStatus.ACTIVE
+    is_boarder: bool | None = None

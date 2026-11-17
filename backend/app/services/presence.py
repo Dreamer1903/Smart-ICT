@@ -224,16 +224,14 @@ async def recompute_discrepancies(session: AsyncSession, now: datetime | None = 
 
 
 async def reset_daily_presence(session: AsyncSession) -> None:
-    """Начало учебного дня: все статусы → UNKNOWN."""
-    await session.execute(
-        update(StudentPresenceState).values(
-            current_location_status=LocationStatus.UNKNOWN,
-            is_discrepancy=False,
-            discrepancy_since=None,
-            last_gate_direction=None,
-            last_gate_at=None,
-            note=None,
-            last_updated=utcnow(),
-        )
-    )
+    """Начало учебного дня: пансионеры → IN_BOARDING (они уже в здании), остальные → UNKNOWN."""
+    from app.models import Student
+
+    boarders = select(Student.id).where(Student.is_boarder.is_(True))
+    common = dict(is_discrepancy=False, discrepancy_since=None, last_gate_direction=None,
+                  last_gate_at=None, last_updated=utcnow())
+    await session.execute(update(StudentPresenceState).where(StudentPresenceState.student_id.not_in(boarders))
+                          .values(current_location_status=LocationStatus.UNKNOWN, note=None, **common))
+    await session.execute(update(StudentPresenceState).where(StudentPresenceState.student_id.in_(boarders))
+                          .values(current_location_status=LocationStatus.IN_BOARDING, note="В пансионате", **common))
     enqueue_event(session, DomainEvent(type="presence.reset", payload={}))

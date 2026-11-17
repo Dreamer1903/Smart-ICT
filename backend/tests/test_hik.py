@@ -71,7 +71,8 @@ def _pid(i: int) -> str:
 
 async def test_sync_persons_and_doors(client, login):
     rep = await _link(client, login)
-    assert rep["matched"] == 20 and rep["hik_total"] == 21 and rep["unmatched_students"] == []
+    assert rep["matched"] == 20 and rep["hik_total"] == 21
+    assert sorted(rep["unmatched_students"]) == ["Ахмедова Сабина", "Юлдашев Самандар"]  # ещё на приёме
     assert rep["unmatched_hik"] == ["9001: Охранник Иванов"]
     assert (await _link(client, login))["already_linked"] == 20
     r = await client.post("/integrations/hikcentral/sync-doors", headers=await _admin(login))
@@ -83,7 +84,7 @@ async def test_sync_persons_and_doors(client, login):
 async def test_observe_mode_changes_nothing(client, login):
     await _link(client, login)
     r = await client.post("/integrations/hikcentral/reconcile", headers=await _admin(login))
-    assert r.json() == {"enforce": False, "result": {"would_revoke": 3, "in_sync": 17}}
+    assert r.json() == {"enforce": False, "result": {"would_revoke": 3, "in_sync": 17, "not_linked": 2}}
     await _deliver()
     assert _pid(3) in sim.hik_state.groups[FULL]  # в HikCentral ничего не поменялось
     st = (await client.get("/integrations/hikcentral/status", headers=await login("director@school.uz"))).json()
@@ -94,7 +95,7 @@ async def test_enforce_debt_payment_cycle(client, login, monkeypatch):
     monkeypatch.setattr(settings, "hik_enforce", True)
     await _link(client, login)
     assert (await client.post("/integrations/hikcentral/reconcile", headers=await _admin(login))).json()["result"] == {
-        "revoke": 3, "in_sync": 17}
+        "revoke": 3, "in_sync": 17, "not_linked": 2}
     await _deliver()
     # Должник: убран из «Вход и выход», добавлен в «Только выход»
     assert _pid(14) not in sim.hik_state.groups[FULL] and _pid(14) in sim.hik_state.groups[EXIT]

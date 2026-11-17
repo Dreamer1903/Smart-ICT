@@ -68,6 +68,7 @@ async def sync_persons(session: AsyncSession) -> PersonSyncReport:
     for s in students:
         by_name.setdefault(_norm(s.full_name), []).append(s)
     linked = {s.hik_person_id for s in students if s.hik_person_id}
+    newly_linked: list[Student] = []
 
     try:
         async for p in integrations.hik.paged(settings.hik_path_person_list, {}):
@@ -94,12 +95,17 @@ async def sync_persons(session: AsyncSession) -> PersonSyncReport:
             student.hik_person_id = person_id
             linked.add(person_id)
             report.matched += 1
+            newly_linked.append(student)
     except HikCentralError as e:
         health.error("hikcentral", str(e))
         raise
     health.ok("hikcentral")
     report.unmatched_students = [s.full_name for s in students if not s.hik_person_id][:50]
     await session.flush()
+    from app.services.enrollment import on_hik_linked
+
+    for student in newly_linked:
+        await on_hik_linked(session, student)
     return report
 
 

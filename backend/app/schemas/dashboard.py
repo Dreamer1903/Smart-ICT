@@ -7,9 +7,10 @@ from app.models.enums import GateDirection, LocationStatus
 
 class PulseCounters(BaseModel):
     total_students: int = 0
-    in_building: int = 0  # по СКУД: в классе + в медпункте + не дошли
+    in_building: int = 0  # в классе + в медпункте + не дошли + в пансионате
     in_class: int = 0
     in_nurse: int = 0
+    in_boarding: int = 0  # пансионеры в пансионате
     not_reached_class: int = 0  # IN_BUILDING
     discrepancies: int = 0  # подмножество not_reached_class
     left_school: int = 0
@@ -23,6 +24,7 @@ class ClassPulse(BaseModel):
     in_class: int = 0
     in_nurse: int = 0
     not_reached_class: int = 0
+    in_boarding: int = 0
     absent: int = 0
 
 
@@ -38,6 +40,7 @@ class StudentLiveRow(BaseModel):
     last_gate_direction: GateDirection | None
     last_gate_at: datetime | None
     active_nurse_visit_id: int | None
+    is_boarder: bool = False
 
 
 class LivePulse(BaseModel):

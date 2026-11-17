@@ -9,6 +9,7 @@ from pathlib import Path
 _tmp = Path(tempfile.mkdtemp()) / "test.db"
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", f"sqlite+aiosqlite:///{_tmp}")
 os.environ["SCHEDULER_ENABLED"] = "false"
+os.environ["BCRYPT_ROUNDS"] = "4"
 
 import httpx  # noqa: E402
 import pytest  # noqa: E402

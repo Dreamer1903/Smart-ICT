@@ -5,12 +5,13 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDownUp, LogIn, LogOut } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { LocationStatus, StudentLiveRow } from "@/lib/types";
 import { cn, formatTime, minutesAgo } from "@/lib/utils";
 
 // Порядок «тревожности» для сортировки по статусу
-const STATUS_RANK: Record<LocationStatus, number> = { IN_BUILDING: 0, UNKNOWN: 1, IN_NURSE: 2, LEFT_SCHOOL: 3, IN_CLASS: 4 };
+const STATUS_RANK: Record<LocationStatus, number> = { IN_BUILDING: 0, UNKNOWN: 1, IN_NURSE: 2, IN_BOARDING: 3, LEFT_SCHOOL: 4, IN_CLASS: 5 };
 const rank = (r: StudentLiveRow) => (r.is_discrepancy ? -1 : STATUS_RANK[r.status]);
 
 const col = createColumnHelper<StudentLiveRow>();
@@ -26,7 +27,15 @@ export function StudentsTable({ rows, globalFilter, flashIds }: Props) {
 
   const columns = useMemo(
     () => [
-      col.accessor("full_name", { header: "Ученик", cell: (c) => <span className="font-medium">{c.getValue()}</span> }),
+      col.accessor("full_name", {
+        header: "Ученик",
+        cell: (c) => (
+          <Link to={`/students/${c.row.original.student_id}`} className="font-medium hover:text-indigo-700 hover:underline">
+            {c.getValue()}
+            {c.row.original.is_boarder && <span className="ml-1.5 rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700">П</span>}
+          </Link>
+        ),
+      }),
       col.accessor("class_name", { header: "Класс" }),
       col.accessor((r) => rank(r), {
         id: "status",

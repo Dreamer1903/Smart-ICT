@@ -20,6 +20,7 @@ export function minutesAgo(iso: string | null | undefined): string {
 export const STATUS_META: Record<LocationStatus, { label: string; className: string }> = {
   IN_CLASS: { label: "На уроке", className: "bg-emerald-100 text-emerald-800 ring-emerald-600/20" },
   IN_NURSE: { label: "В медпункте", className: "bg-sky-100 text-sky-800 ring-sky-600/20" },
+  IN_BOARDING: { label: "В пансионате", className: "bg-violet-100 text-violet-800 ring-violet-600/20" },
   IN_BUILDING: { label: "В здании", className: "bg-amber-100 text-amber-800 ring-amber-600/20" },
   LEFT_SCHOOL: { label: "Ушёл", className: "bg-slate-200 text-slate-700 ring-slate-500/20" },
   UNKNOWN: { label: "Не пришёл", className: "bg-rose-50 text-rose-700 ring-rose-600/20" },
@@ -38,13 +39,23 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   Teacher: "Учитель",
   Nurse: "Медсестра",
   DutyTeacher: "Дежурный учитель",
+  ParentRelations: "Завуч по работе с родителями",
+  Admissions: "Менеджер по приёму",
+  Cashier: "Кассир",
 };
 
 export const PULSE_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "DutyTeacher"];
 export const ACCESS_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch"];
+export const ENROLLMENT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Admissions", "Cashier", "Teacher"];
+export const REGISTRAR_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Admissions"];
+export const REPORT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ParentRelations", "Teacher", "DutyTeacher"];
 export const NURSE_ROLES: UserRole[] = ["SuperAdmin", "Nurse"];
 
-export const homePathFor = (role: UserRole) => (role === "Nurse" ? "/nurse" : PULSE_ROLES.includes(role) ? "/pulse" : "/forbidden");
+export const homePathFor = (role: UserRole) =>
+  role === "Nurse" ? "/nurse" : PULSE_ROLES.includes(role) ? "/pulse" : ENROLLMENT_ROLES.includes(role) ? "/enrollment" : "/students";
+
+export const formatDate = (iso: string | null | undefined) =>
+  iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("ru-RU") : "—";
 
 export const formatMoney = (v: number, currency = "UZS") =>
   `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(v)} ${currency === "UZS" ? "сум" : currency}`;

@@ -127,7 +127,8 @@ export function PulsePage() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <Kpi icon={Building2} label="В здании (СКУД)" value={c.in_building} total={c.total_students} tone="bg-indigo-100 text-indigo-700" />
+        <Kpi icon={Building2} label="В здании" value={c.in_building} total={c.total_students} tone="bg-indigo-100 text-indigo-700"
+          hint={c.in_boarding ? `из них в пансионате ${c.in_boarding}` : undefined} />
         <Kpi icon={School} label="На уроках" value={c.in_class} total={c.total_students} tone="bg-emerald-100 text-emerald-700" />
         <Kpi icon={Stethoscope} label="В медпункте" value={c.in_nurse} tone="bg-sky-100 text-sky-700" />
         <Kpi icon={DoorOpen} label="Не дошли до класса" value={c.not_reached_class} tone="bg-amber-100 text-amber-700"
@@ -184,10 +185,11 @@ export function PulsePage() {
                       <div className="bg-emerald-500" style={{ width: pct(cl.in_class) }} />
                       <div className="bg-sky-500" style={{ width: pct(cl.in_nurse) }} />
                       <div className="bg-amber-400" style={{ width: pct(cl.not_reached_class) }} />
+                      <div className="bg-violet-400" style={{ width: pct(cl.in_boarding) }} />
                       <div className="bg-slate-300" style={{ width: pct(cl.absent) }} />
                     </div>
                     <div className="mt-1.5 flex gap-3 text-[11px] text-slate-500">
-                      <span>мед {cl.in_nurse}</span><span>в здании {cl.not_reached_class}</span><span>нет {cl.absent}</span>
+                      <span>мед {cl.in_nurse}</span>{cl.in_boarding > 0 && <span>пансион {cl.in_boarding}</span>}<span>в здании {cl.not_reached_class}</span><span>нет {cl.absent}</span>
                     </div>
                   </button>
                 );

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-only-insecure-secret-change-me-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 720
+    bcrypt_rounds: int = 12  # в тестах снижается для скорости
 
     gate_api_key: str = "dev-gate-key"
 
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
     discrepancy_grace_minutes: int = 10
     school_timezone: str = "Asia/Tashkent"
     daily_reset_hour: int = 4
+    school_start_time: str = "08:30"  # пришёл позже — «опоздал» в отчёте посещаемости
 
     # ---------------- Контроль доступа
     access_always_allow_exit: bool = True  # выход НИКОГДА не блокируется (пожарная безопасность)

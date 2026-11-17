@@ -19,4 +19,5 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     phone: Mapped[str | None] = mapped_column(String(32))
     hashed_password: Mapped[str] = mapped_column(String(255))
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64))  # для уведомлений сотруднику
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

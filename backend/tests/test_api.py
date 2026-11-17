@@ -38,8 +38,9 @@ async def test_oauth2_form_login(client):
 async def test_live_pulse_from_seed(client, login):
     c = (await _pulse(client, await login("director@school.uz")))["counters"]
     assert c == {
-        "total_students": 20, "in_building": 14, "in_class": 12, "in_nurse": 1,
-        "not_reached_class": 1, "discrepancies": 1, "left_school": 1, "not_arrived": 5,  # 2 не пришли + 3 должника
+        "total_students": 20, "in_building": 15, "in_class": 12, "in_nurse": 1, "in_boarding": 1,
+        "not_reached_class": 1, "discrepancies": 1, "left_school": 1,
+        "not_arrived": 4,  # 1 не пришёл + 3 должника (пансионерка Миронова — в пансионате)
     }
 
 

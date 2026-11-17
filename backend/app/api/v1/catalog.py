@@ -47,6 +47,8 @@ async def list_students(
             rfid_card_id=s.rfid_card_id,
             parent_phone=s.parent_phone,
             status=s.presence.current_location_status if s.presence else LocationStatus.UNKNOWN,
+            student_status=s.status,
+            is_boarder=s.is_boarder,
         )
         for s in students
     ]

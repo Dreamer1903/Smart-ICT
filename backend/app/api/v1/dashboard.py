@@ -35,8 +35,7 @@ async def stream(
     db: DbSession,
     token: Annotated[str, Query(description="JWT (EventSource не умеет слать заголовки)")],
 ) -> StreamingResponse:
-    user = await user_from_token(db, token)
-    await require_roles(*VIEWERS)(user)
+    user = await user_from_token(db, token)  # поток доступен всем сотрудникам (уведомления, приём, пульс)
     await db.close()  # соединение с БД стриму не нужно
 
     queue = event_bus.subscribe()

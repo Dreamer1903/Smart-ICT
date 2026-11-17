@@ -4,7 +4,11 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/auth/AuthContext";
 import { Layout } from "@/components/Layout";
 import type { UserRole } from "@/lib/types";
-import { ACCESS_ROLES, homePathFor, NURSE_ROLES, PULSE_ROLES } from "@/lib/utils";
+import { ACCESS_ROLES, ENROLLMENT_ROLES, homePathFor, NURSE_ROLES, PULSE_ROLES, REPORT_ROLES } from "@/lib/utils";
+import { AttendancePage } from "@/pages/AttendancePage";
+import { EnrollmentPage } from "@/pages/EnrollmentPage";
+import { StudentCardPage } from "@/pages/StudentCardPage";
+import { StudentsPage } from "@/pages/StudentsPage";
 import { AccessPage } from "@/pages/AccessPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { NursePage } from "@/pages/NursePage";
@@ -41,6 +45,10 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<Guard><Layout /></Guard>}>
             <Route path="/pulse" element={<Guard roles={PULSE_ROLES}><PulsePage /></Guard>} />
+            <Route path="/enrollment" element={<Guard roles={ENROLLMENT_ROLES}><EnrollmentPage /></Guard>} />
+            <Route path="/students" element={<StudentsPage />} />
+            <Route path="/students/:id" element={<StudentCardPage />} />
+            <Route path="/attendance" element={<Guard roles={REPORT_ROLES}><AttendancePage /></Guard>} />
             <Route path="/access" element={<Guard roles={ACCESS_ROLES}><AccessPage /></Guard>} />
             <Route path="/nurse" element={<Guard roles={NURSE_ROLES}><NursePage /></Guard>} />
             <Route path="/forbidden" element={<Forbidden />} />

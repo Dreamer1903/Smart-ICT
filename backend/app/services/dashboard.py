@@ -5,12 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.base import utcnow
-from app.models import LocationStatus, NurseVisit, Student
+from app.models import LocationStatus, NurseVisit, Student, StudentStatus
 from app.schemas.dashboard import ClassPulse, LivePulse, PulseCounters, StudentLiveRow
 
 DEFAULT_REASONS: dict[LocationStatus, str] = {
     LocationStatus.IN_CLASS: "На уроке",
     LocationStatus.IN_NURSE: "В медпункте",
+    LocationStatus.IN_BOARDING: "В пансионате",
     LocationStatus.IN_BUILDING: "В здании, не дошёл до класса",
     LocationStatus.LEFT_SCHOOL: "Покинул школу",
     LocationStatus.UNKNOWN: "Сегодня не проходил турникет",
@@ -21,6 +22,7 @@ async def build_live_pulse(session: AsyncSession) -> LivePulse:
     students = (
         await session.execute(
             select(Student)
+            .where(Student.status == StudentStatus.ACTIVE)  # идущие на приём пока не считаются
             .options(selectinload(Student.school_class), selectinload(Student.presence))
             .order_by(Student.class_id, Student.full_name)
         )
@@ -53,6 +55,9 @@ async def build_live_pulse(session: AsyncSession) -> LivePulse:
             case LocationStatus.IN_NURSE:
                 counters.in_nurse += 1
                 cp.in_nurse += 1
+            case LocationStatus.IN_BOARDING:
+                counters.in_boarding += 1
+                cp.in_boarding += 1
             case LocationStatus.IN_BUILDING:
                 counters.not_reached_class += 1
                 cp.not_reached_class += 1
@@ -83,10 +88,11 @@ async def build_live_pulse(session: AsyncSession) -> LivePulse:
                 last_gate_direction=p.last_gate_direction if p else None,
                 last_gate_at=p.last_gate_at if p else None,
                 active_nurse_visit_id=visit.id if visit else None,
+                is_boarder=bool(s.is_boarder),
             )
         )
 
-    counters.in_building = counters.in_class + counters.in_nurse + counters.not_reached_class
+    counters.in_building = counters.in_class + counters.in_nurse + counters.not_reached_class + counters.in_boarding
     return LivePulse(
         generated_at=utcnow(),
         counters=counters,

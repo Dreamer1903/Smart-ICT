@@ -1,5 +1,6 @@
 // Тонкая типизированная обёртка над fetch. JWT хранится в localStorage.
 import type {
+  AttendanceReport, Enrollment, GuardianIn, StaffNotification, StepKind, StudentCard,
   AccessDecision, AccessDecisionResult, AccessEventRow, AccessSummary, CredentialKind, Debtor, HikStatus, PaymentCheckResult,
   GateDirection, GatePassResult, LivePulse, NurseOutcome, NurseVisit, SchoolClass, Student, Token, User,
 } from "./types";
@@ -82,6 +83,25 @@ export const api = {
     request<PaymentCheckResult>(`/access/students/${student_id}/payment-check`, { method: "POST" }),
 
   hikStatus: () => request<HikStatus>("/integrations/hikcentral/status"),
+
+  // Приём учеников
+  enrollments: (p: { state?: "active" | "completed" | "cancelled" | "all"; mine?: boolean } = {}) =>
+    request<Enrollment[]>(`/enrollments${qs(p)}`),
+  createEnrollment: (body: { full_name: string; class_id: number; birth_date?: string | null; notes?: string | null; guardians: GuardianIn[] }) =>
+    request<Enrollment>("/enrollments", { method: "POST", body: JSON.stringify(body) }),
+  completeStep: (id: number, kind: StepKind, data: Record<string, unknown>, comment?: string) =>
+    request<Enrollment>(`/enrollments/${id}/steps/${kind}/complete`, { method: "POST", body: JSON.stringify({ data, comment }) }),
+
+  // Карточка ученика и отчёты
+  studentCard: (id: number) => request<StudentCard>(`/students/${id}/card`),
+  updateStudent: (id: number, body: Record<string, unknown>) =>
+    request<StudentCard>(`/students/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  attendance: (p: { date?: string; class_id?: number | null } = {}) => request<AttendanceReport>(`/reports/attendance${qs(p)}`),
+
+  // Уведомления сотрудникам
+  notifications: () => request<{ unread: number; items: StaffNotification[] }>("/notifications"),
+  readNotification: (id: number) => request<void>(`/notifications/${id}/read`, { method: "POST" }),
+  readAllNotifications: () => request<void>("/notifications/read-all", { method: "POST" }),
 
   // Симулятор 1С (только dev: vite проксирует /sim → :8010)
   simPay: async (account: string) => {
