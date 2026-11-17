@@ -155,3 +155,9 @@ class Visibility(StrEnum):
     PRIVATE = "PRIVATE"  # только автор
     TEACHERS = "TEACHERS"  # все учителя
     ALL = "ALL"  # учителя и ученики
+
+
+class DutyStatus(StrEnum):
+    PLANNED = "PLANNED"  # назначен
+    STARTED = "STARTED"  # отсканировал QR на посту
+    MISSED = "MISSED"  # смена закончилась, отметки нет

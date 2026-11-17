@@ -24,6 +24,7 @@ from app.models.academic import (
     TimetableProposal,
     TimetableVersion,
 )
+from app.models.duty import DutyAssignment, DutyPost, DutyShift
 from app.models.enrollment import Enrollment, EnrollmentStep, StaffNotification, StudentTimelineEvent
 from app.models.enums import (
     AttendanceMark,
@@ -37,6 +38,7 @@ from app.models.enums import (
     AccessReason,
     CredentialKind,
     DeviceAdapter,
+    DutyStatus,
     EnrollmentStatus,
     EnrollmentStepKind,
     GateDirection,
@@ -55,6 +57,10 @@ from app.models.turnstile import TurnstileLog
 from app.models.user import User
 
 __all__ = [
+    "DutyAssignment",
+    "DutyPost",
+    "DutyShift",
+    "DutyStatus",
     "AcademicPeriod",
     "BellSlot",
     "Grade",

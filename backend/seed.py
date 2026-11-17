@@ -201,6 +201,11 @@ async def seed(session: AsyncSession, with_timetable: bool = True) -> dict[str, 
         version, problems, _ = await timetable_db.generate(session, admin, "Основное расписание", None, 15)
         assert version is not None, problems
         await timetable_db.publish(session, version)
+        # график дежурств на текущую неделю — по расписанию (у кого мало уроков)
+        from app.services import duty as duty_svc
+
+        monday = duty_svc.local_now().date() - timedelta(days=duty_svc.local_now().weekday())
+        await duty_svc.generate(session, monday, monday + timedelta(days=6))
 
     # --- сверка: «потерявшийся» в здании получит флаг DISCREPANCY
     await presence.recompute_discrepancies(session, now)

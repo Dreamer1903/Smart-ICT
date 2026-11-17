@@ -44,7 +44,14 @@ class Settings(BaseSettings):
     timetable_time_limit_seconds: float = 60.0  # 25 классов ≈ 60 с
     library_dir: str = str(BASE_DIR / "storage" / "library")
     library_max_mb: int = 50
-    grade_max: int = 5  # шкала оценок 1…grade_max  # пришёл позже — «опоздал» в отчёте посещаемости
+    grade_max: int = 5  # шкала оценок 1…grade_max
+
+    # ---------------- Дежурства
+    duty_notify_hour: int = 7  # во сколько (местное время) присылать «сегодня у вас дежурство»
+    duty_checkin_early_minutes: int = 20  # отметиться по QR можно за N минут до начала смены
+    duty_grace_minutes: int = 5  # отметка позже начала + N минут — «опоздал»
+    duty_remind_after_minutes: int = 10  # через N минут без отметки — уведомление завучу
+    duty_require_lesson_day: bool = True  # дежурит только в дни, когда у учителя есть уроки (он в школе)  # пришёл позже — «опоздал» в отчёте посещаемости
 
     # ---------------- Контроль доступа
     access_always_allow_exit: bool = True  # выход НИКОГДА не блокируется (пожарная безопасность)

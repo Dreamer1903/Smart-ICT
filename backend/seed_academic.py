@@ -18,6 +18,8 @@ from app.models import (
     Subject,
     TeacherPreference,
     TeachingAssignment,
+    DutyPost,
+    DutyShift,
     User,
     UserRole,
 )
@@ -115,6 +117,14 @@ async def seed_academic(session: AsyncSession, users_by_email: dict[str, User]) 
                                   comment="Совместитель: во вторник и четверг работаю в другой школе"))
     session.add(TeacherPreference(teacher_id=users_by_email["math@school.uz"].id,
                                   cells={f"{d}-1": "avoid" for d in range(1, 6)}, comment="Прошу не ставить первые уроки"))
+
+    # Посты дежурства с QR-кодами
+    session.add_all([
+        DutyPost(name="1 этаж", location="Холл у главного входа", shifts=[DutyShift(name="Утро", start_time=time(8, 0), end_time=time(8, 30))]),
+        DutyPost(name="2 этаж", location="У лестницы", shifts=[DutyShift(name="Большая перемена", start_time=time(10, 10), end_time=time(10, 25))]),
+        DutyPost(name="3 этаж", location="У лестницы", shifts=[DutyShift(name="Большая перемена", start_time=time(10, 10), end_time=time(10, 25))]),
+        DutyPost(name="Столовая", location="Вход в столовую", shifts=[DutyShift(name="Обед", start_time=time(13, 0), end_time=time(13, 30), required=2)]),
+    ])
 
     # Ученик и родитель (Алиев Тимур, 9"А")
     student = (await session.execute(select(Student).order_by(Student.id).limit(1))).scalar_one()

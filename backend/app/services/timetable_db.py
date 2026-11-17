@@ -138,6 +138,7 @@ async def publish(session: AsyncSession, version: TimetableVersion) -> None:
     version.status = TimetableStatus.PUBLISHED
     version.published_at = utcnow()
     version.report = {**(version.report or {}), **report}
+    await session.flush()
 
 
 async def copy_version(session: AsyncSession, src: TimetableVersion, name: str, actor: User) -> TimetableVersion:

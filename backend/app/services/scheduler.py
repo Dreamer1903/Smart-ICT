@@ -84,6 +84,18 @@ async def hik_reconcile_job() -> None:
         logger.info("HikCentral: сверка прав %s", counts)
 
 
+async def duty_job() -> None:
+    """Дежурства: утренние уведомления, напоминание завучу «не приступил», отметка «пропустил»."""
+    from app.services import duty
+
+    async with SessionLocal() as session:
+        sent = await duty.notify_today(session)
+        res = await duty.watch(session)
+        await commit_and_dispatch(session)
+        if sent or res["reminded"] or res["missed"]:
+            logger.info("Дежурства: уведомлено %s, напоминаний %s, пропусков %s", sent, res["reminded"], res["missed"])
+
+
 def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=settings.school_timezone)
     scheduler.add_job(
@@ -98,6 +110,7 @@ def build_scheduler() -> AsyncIOScheduler:
         payment_recheck_job, "interval", seconds=settings.payment_recheck_interval_seconds,
         id="payment_recheck", max_instances=1, coalesce=True,
     )
+    scheduler.add_job(duty_job, "interval", seconds=120, id="duty", max_instances=1, coalesce=True)
     if settings.hik_enabled:
         if settings.hik_event_mode in ("poll", "both"):
             scheduler.add_job(hik_poll_job, "interval", seconds=settings.hik_poll_seconds,
