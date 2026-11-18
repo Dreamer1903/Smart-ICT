@@ -65,7 +65,9 @@ export const http = {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(await res.blob());
     a.download = fileName;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(a.href);
   },
 };

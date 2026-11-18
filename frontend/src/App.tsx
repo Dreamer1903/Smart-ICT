@@ -16,6 +16,7 @@ import { SchedulePage } from "@/pages/SchedulePage";
 import { AttendancePage } from "@/pages/AttendancePage";
 import { EnrollmentPage } from "@/pages/EnrollmentPage";
 import { StudentCardPage } from "@/pages/StudentCardPage";
+import { StaffPage } from "@/pages/StaffPage";
 import { StudentsPage } from "@/pages/StudentsPage";
 import { AccessPage } from "@/pages/AccessPage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -41,7 +42,7 @@ function Home() {
 function Forbidden() {
   return (
     <div className="py-20 text-center text-slate-600">
-      Для вашей роли экраны School OS пока не подключены. Обратитесь к администратору.
+      Ваша роль в SchoolOS ещё не назначена. Попросите директора или администратора школы выбрать её в разделе «Сотрудники».
     </div>
   );
 }
@@ -63,7 +64,8 @@ export default function App() {
             <Route path="/preferences" element={<Guard roles={STAFF_ROLES}><PreferencesPage /></Guard>} />
             <Route path="/journal" element={<Guard roles={JOURNAL_ROLES}><JournalPage /></Guard>} />
             <Route path="/diary" element={<Guard roles={FAMILY_ROLES}><DiaryPage /></Guard>} />
-            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/library" element={<Guard roles={[...STAFF_ROLES, ...FAMILY_ROLES]}><LibraryPage /></Guard>} />
+            <Route path="/staff" element={<Guard roles={["SuperAdmin", "Director"]}><StaffPage /></Guard>} />
             <Route path="/duty" element={<Guard roles={STAFF_ROLES}><DutyPage /></Guard>} />
             <Route path="/duty/checkin/:token" element={<Guard roles={STAFF_ROLES}><DutyCheckinPage /></Guard>} />
             <Route path="/attendance" element={<Guard roles={REPORT_ROLES}><AttendancePage /></Guard>} />

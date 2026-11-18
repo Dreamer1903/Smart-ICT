@@ -1,7 +1,7 @@
 // Шапка: пункты меню сгруппированы в раскрывающиеся списки (компьютер) и «бургер»-меню (телефон/планшет).
 import {
   Activity, BookOpen, CalendarClock, BookOpenCheck, CalendarCheck, CalendarDays, ChevronDown, ClipboardList, GraduationCap, HeartPulse,
-  Library, LogOut, Menu, ShieldCheck, SlidersHorizontal, Stethoscope, Users, X, type LucideIcon,
+  Library, LogOut, Menu, UserCog, ShieldCheck, SlidersHorizontal, Stethoscope, Users, X, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
@@ -27,8 +27,9 @@ const GROUPS: Group[] = [
     { to: "/preferences", label: "Мои пожелания к расписанию", icon: SlidersHorizontal, roles: TEACHING },
     { to: "/library", label: "Библиотека", icon: Library, roles: EVERYONE },
   ] },
-  { label: "Ученики", icon: Users, items: [
+  { label: "Люди", icon: Users, items: [
     { to: "/students", label: "Все ученики", icon: Users, roles: STAFF_ROLES },
+    { to: "/staff", label: "Сотрудники", icon: UserCog, roles: ["SuperAdmin", "Director"] },
     { to: "/enrollment", label: "Приём учеников", icon: ClipboardList, roles: ENROLLMENT_ROLES.filter((r) => r !== "Teacher") },
     { to: "/attendance", label: "Посещаемость (турникеты)", icon: CalendarCheck, roles: REPORT_ROLES },
   ] },

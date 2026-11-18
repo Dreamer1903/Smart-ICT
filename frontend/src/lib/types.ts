@@ -2,7 +2,7 @@
 
 export type UserRole =
   | "SuperAdmin" | "Director" | "Zavuch" | "Teacher" | "Nurse" | "DutyTeacher"
-  | "ParentRelations" | "Admissions" | "Cashier" | "ZavuchAcademic" | "ZavuchUpbringing" | "Student" | "Parent";
+  | "ParentRelations" | "Admissions" | "Cashier" | "ZavuchAcademic" | "ZavuchUpbringing" | "Student" | "Parent" | "Staff";
 export type LocationStatus = "IN_BUILDING" | "IN_CLASS" | "IN_NURSE" | "IN_BOARDING" | "LEFT_SCHOOL" | "UNKNOWN";
 export type StudentStatus = "ENROLLING" | "ACTIVE" | "WITHDRAWN";
 export type NurseOutcome = "RESTING" | "SENT_HOME" | "RETURNED_TO_CLASS";

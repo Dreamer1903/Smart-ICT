@@ -46,6 +46,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   ZavuchUpbringing: "Завуч по воспитательной части",
   Student: "Ученик",
   Parent: "Родитель",
+  Staff: "Сотрудник (роль не назначена)",
 };
 
 export const PULSE_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "ZavuchAcademic", "ZavuchUpbringing", "DutyTeacher"];
@@ -63,7 +64,8 @@ export const REPORT_ROLES: UserRole[] = ["SuperAdmin", "Director", "Zavuch", "Za
 export const NURSE_ROLES: UserRole[] = ["SuperAdmin", "Nurse"];
 
 export const homePathFor = (role: UserRole) =>
-  FAMILY_ROLES.includes(role) ? "/diary"
+  role === "Staff" ? "/forbidden"
+  : FAMILY_ROLES.includes(role) ? "/diary"
     : role === "Nurse" ? "/nurse"
       : role === "Teacher" ? "/journal"
         : role === "ZavuchAcademic" ? "/schedule"

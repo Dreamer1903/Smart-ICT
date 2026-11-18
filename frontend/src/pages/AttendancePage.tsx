@@ -33,8 +33,10 @@ export function AttendancePage() {
     const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `посещаемость-${report.date}.csv`;
+    a.download = `schoolos-attendance-${report.date}.csv`;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
   }
 
   const s = report?.summary;
