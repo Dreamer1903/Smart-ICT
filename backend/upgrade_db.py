@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 
 # (признак схемы, ревизия Alembic) — от новых к старым
 KNOWN = [
+    (lambda t, c: "hik_person_id" in c.get("users", ()), "23a26ad59f47"),  # импорт сотрудников
     (lambda t, c: "duty_posts" in t, "d0aadb89e9e7"),  # дежурства
     (lambda t, c: "google_sub" in c.get("users", ()), "3ec5cee3a25a"),  # вход через Google
     (lambda t, c: "lessons" in t, "33651d8b707e"),  # учебная часть

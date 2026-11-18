@@ -59,8 +59,9 @@ def require_roles(*roles: UserRole) -> Callable[..., Coroutine[Any, Any, User]]:
 
 # Наборы ролей, переиспользуемые в роутерах
 MANAGEMENT = (UserRole.DIRECTOR, UserRole.ZAVUCH)
-# Все сотрудники (без учеников и родителей — у них только свой дневник)
-STAFF_ALL = tuple(r for r in UserRole if r not in (UserRole.STUDENT, UserRole.PARENT))
+# Все сотрудники с назначенной ролью (без учеников и родителей — у них только свой дневник;
+# без «Staff» — роль ещё не назначена администратором)
+STAFF_ALL = tuple(r for r in UserRole if r not in (UserRole.STUDENT, UserRole.PARENT, UserRole.STAFF))
 FAMILY = (UserRole.STUDENT, UserRole.PARENT)
 GATE_OPERATORS = (UserRole.DIRECTOR, UserRole.ZAVUCH, UserRole.DUTY_TEACHER)
 

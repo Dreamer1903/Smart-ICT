@@ -20,6 +20,8 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(32))
     hashed_password: Mapped[str] = mapped_column(String(255))
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64))  # для уведомлений сотруднику
+    hik_person_id: Mapped[str | None] = mapped_column(String(64), unique=True)  # ID в HikCentral (ключ импорта сотрудников)
+    department: Mapped[str | None] = mapped_column(String(128))  # отдел из файла сотрудников
     google_sub: Mapped[str | None] = mapped_column(String(64), unique=True)  # ID Google-аккаунта (привязывается при первом входе)
     # Учётная запись ученика (роль Student). use_alter — разрывает цикл users ↔ students при создании/удалении схемы.
     student_id: Mapped[int | None] = mapped_column(

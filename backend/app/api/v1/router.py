@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import academic, access, attendance, duty, enrollment, journal, library, auth, catalog, dashboard, gate, integrations, nurse
+from app.api.v1 import academic, access, attendance, duty, enrollment, journal, library, staff, auth, catalog, dashboard, gate, integrations, nurse
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -16,3 +16,4 @@ api_router.include_router(academic.router)
 api_router.include_router(journal.router)
 api_router.include_router(library.router)
 api_router.include_router(duty.router)
+api_router.include_router(staff.router)

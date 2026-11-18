@@ -17,6 +17,7 @@ class UserRole(StrEnum):
     ZAVUCH_UPBRINGING = "ZavuchUpbringing"  # завуч по воспитательной части (посещаемость, опоздания)
     STUDENT = "Student"
     PARENT = "Parent"
+    STAFF = "Staff"  # сотрудник, роль ещё не назначена (доступа к разделам нет)
 
 
 class GateDirection(StrEnum):
